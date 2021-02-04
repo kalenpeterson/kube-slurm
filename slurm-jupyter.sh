@@ -103,7 +103,7 @@ kubectl wait --for=condition=ContainersReady --timeout=${TIMEOUT}s -n ${NAMESPAC
 echo "Container Ready, following logs (updates every 10s)"
 while ${WATCH_LOGS}
 do
-  kubectl logs --since=10s -n ${NAMESPACE} ${JOB_NAME} || exit 3
+  kubectl logs --since=10s -n ${NAMESPACE} ${JOB_NAME}
   sleep 10
 done
 
