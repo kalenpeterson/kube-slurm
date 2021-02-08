@@ -4,7 +4,7 @@
 # Set Slurm ENV Vars
 export SLURM_GPUS=0
 export SLURM_JOB_ACCOUNT=unknown
-export LURM_JOB_ID=99
+export SLURM_JOB_ID=99
 export SLURM_JOB_NAME=slurm-jupyter-job
 export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-node01
