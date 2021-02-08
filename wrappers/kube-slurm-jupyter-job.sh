@@ -79,12 +79,12 @@ spec:
 EOF
 
 ## Generate Random Login Token
-JUPYTER_TOKEN=$(openssl rand -base64 24)
+JUPYTER_TOKEN=$(openssl rand -hex 24)
 log "Generated Jupyter Token: '${JUPYTER_TOKEN}'"
 
 ## Generate Notebook URL
 NODE_PORT=$(kubectl describe service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} |grep NodePort: |awk '{print $3}' |awk -F/ '{print $1}')
-JUPYTER_URL="http://${KUBE_CLUSTER_DNS}:${NODE_PORT}?token=${JUPYTER_TOKEN}"
+JUPYTER_URL="http://${KUBE_CLUSTER_DNS}:${NODE_PORT}/?token=${JUPYTER_TOKEN}"
 echo "########################################################"
 echo "Your Jupyter Notebook URL will be: ${JUPYTER_URL}"
 echo "########################################################"
