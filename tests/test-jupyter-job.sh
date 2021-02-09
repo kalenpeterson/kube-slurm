@@ -10,7 +10,7 @@ export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-node01
 
 # Set Docker Image
-export KUBE_IMAGE=KUBE_IMAGE=registry.local:31500/slurm-tensorflow:latest
+export KUBE_IMAGE=registry.local:31500/slurm-tensorflow:latest
 
 # Set Jupyter Port
 export KUBE_TARGET_PORT=8888
