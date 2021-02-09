@@ -10,9 +10,13 @@ export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-node01
 
 # Set Docker Image
-export KUBE_IMAGE=hello-world
+export KUBE_IMAGE=KUBE_IMAGE=registry.local:31500/slurm-tensorflow:latest
 
 # Set Jupyter Port
 export KUBE_TARGET_PORT=8888
+
+# Set your Shared Working Directory
+## You're UID/GID must have read/write access to this path
+export KUBE_WORK_VOLUME=/nas/volumes/homes/dgx
 
 ../wrappers/kube-slurm-jupyter-job.sh
