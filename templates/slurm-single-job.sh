@@ -8,7 +8,7 @@
 #SBATCH --gpus=2
 
 # Set Docker Image
-export KUBE_IMAGE=hello-world
+export KUBE_IMAGE=registry.local:31500/job-test:latest
 
 srun hostname
 srun date
