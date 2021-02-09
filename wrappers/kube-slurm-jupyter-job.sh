@@ -22,6 +22,9 @@ KUBE_POD_MONITOR_INTERVAL=10
 KUBE_NAMESPACE=slurm
 KUBE_CLUSTER_DNS=nvidia-pod
 
+# Setup Kubeconfig
+export KUBECONFIG=~/.kube/config
+
 # Print Kube ENV Vars
 echo 
 echo "Kube ENV Vars:"
