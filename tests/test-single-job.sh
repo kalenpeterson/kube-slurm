@@ -10,7 +10,7 @@ export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-node01
 
 # Set Docker Image
-export KUBE_IMAGE=hello-world
+export KUBE_IMAGE=registry.local:31500/job-test:latest
 
 # Set your Shared Working Directory
 ## You're UID/GID must have read/write access to this path
