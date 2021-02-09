@@ -29,6 +29,7 @@ echo "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
 echo "KUBE_JOB_UID: ${KUBE_JOB_UID}"
 echo "KUBE_JOB_GID: ${KUBE_JOB_GID}"
 echo "KUBE_IMAGE: ${KUBE_IMAGE}"
+echo "KUBE_WORK_VOLUME: ${KUBE_WORK_VOLUME}"
 echo "KUBE_TARGET_PORT: ${KUBE_TARGET_PORT}"
 echo "KUBE_NODE: ${KUBE_NODE}"
 echo "KUBE_GPU_COUNT: ${KUBE_GPU_COUNT}"
@@ -108,10 +109,21 @@ metadata:
   labels:
     app: ${KUBE_JOB_NAME}
 spec:
+  securityContext:
+    runAsUser: ${KUBE_JOB_UID}
+    runAsGroup: ${KUBE_JOB_GID}
+  volumes:
+  - name: workspace
+    hostPath:
+      type: Directory
+      path: ${KUBE_WORK_VOLUME}
   restartPolicy: Never
   containers:
   - name: ${KUBE_JOB_NAME}
     image: ${KUBE_IMAGE}
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
     env:
     - name: NB_TOKEN
       value: ${JUPYTER_TOKEN}

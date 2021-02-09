@@ -10,6 +10,10 @@
 # Set Docker Image
 export KUBE_IMAGE=registry.local:31500/job-test:latest
 
+# Set your Shared Working Directory
+## You're UID/GID must have read/write access to this path
+export KUBE_WORK_VOLUME=/nas/volumes/homes/dgx
+
 srun hostname
 srun date
 srun ../wrappers/kube-slurm-image-job.sh
