@@ -21,6 +21,9 @@ KUBE_INIT_TIMEOUT=600
 KUBE_POD_MONITOR_INTERVAL=10
 KUBE_NAMESPACE=slurm
 
+# Setup Kubeconfig
+export KUBECONFIG=~/.kube/config
+
 # Print Kube ENV Vars
 echo 
 echo "Kube ENV Vars:"
