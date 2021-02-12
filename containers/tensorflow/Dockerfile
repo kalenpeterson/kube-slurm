@@ -46,7 +46,7 @@ WORKDIR /workspace
 COPY start.sh /root/start.sh
 
 # Chmod it
-RUN chmod +x /root/shart.sh
+RUN chmod +x /root/start.sh
 
 # Set Envs
 ENV NB_TOKEN=${NB_TOKEN}
