@@ -1,5 +1,6 @@
 #!/bin/bash
 ## Manage Jupyter Job Pods from Slurm
+source ../config/settings.sh
 
 # Print Slurm ENV Vars
 echo
