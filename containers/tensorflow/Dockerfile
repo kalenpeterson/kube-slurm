@@ -42,9 +42,19 @@ EXPOSE 6006
 # /workspace contains NVIDIA tutorials and example code
 WORKDIR /workspace
 
-# SEt ENVs
+# Copy in start.sh to handle custom UID
+COPY start.sh /root/start.sh
+
+# Chmod it
+RUN chmod +x /root/shart.sh
+
+# Set Envs
 ENV NB_TOKEN=${NB_TOKEN}
+ENV NB_USER=${NB_USER}
+ENV NB_UID=${NB_UID}
+ENV NB_GROUP=${NB_GROUP}
+ENV NB_GID=${NB_GID}
 
 # Start Jupyter up by default rather than a shell
 ENTRYPOINT ["/bin/sh"]
-CMD ["-c", "jupyter lab  --notebook-dir=/workspace --ip=0.0.0.0 --no-browser --port=8888 --NotebookApp.token=${NB_TOKEN} --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${NB_PREFIX}"]
+CMD ["-c", "/root/start.sh jupyter lab  --notebook-dir=/workspace --ip=0.0.0.0 --no-browser --port=8888 --NotebookApp.token=${NB_TOKEN} --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${NB_PREFIX}"]
