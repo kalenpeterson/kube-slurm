@@ -1,5 +1,5 @@
 #!/bin/bash
-## Manage Single-Run Job Pods from Slurm
+## Manage Jupyter Job Pods from Slurm
 
 # Print Slurm ENV Vars
 echo
@@ -19,13 +19,13 @@ KUBE_JOB_USER=$(id -un)
 KUBE_JOB_GROUP=$(id -gn)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
-KUBE_INIT_TIMEOUT=600
-KUBE_POD_MONITOR_INTERVAL=10
-KUBE_NAMESPACE=slurm
-KUBE_CLUSTER_DNS=nvidia-pod
+KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT}
+KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL}
+KUBE_NAMESPACE=${KUBE_NAMESPACE}
+KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS}
 
 # Setup Kubeconfig
-export KUBECONFIG=~/.kube/config
+export KUBECONFIG=${KUBECONFIG}
 
 # Print Kube ENV Vars
 echo 
