@@ -1,5 +1,6 @@
 #!/bin/bash
 ## Manage Single-Run Job Pods from Slurm
+source ../config/settings.sh
 
 # Print Slurm ENV Vars
 echo
@@ -17,12 +18,12 @@ KUBE_JOB_UID=$(id -u)
 KUBE_JOB_GID=$(id -g)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
-KUBE_INIT_TIMEOUT=600
-KUBE_POD_MONITOR_INTERVAL=10
-KUBE_NAMESPACE=slurm
+KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT}
+KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL}
+KUBE_NAMESPACE=${KUBE_NAMESPACE}
 
 # Setup Kubeconfig
-export KUBECONFIG=~/.kube/config
+export KUBECONFIG=${KUBECONFIG}
 
 # Print Kube ENV Vars
 echo 
