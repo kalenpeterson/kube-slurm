@@ -42,6 +42,11 @@ EXPOSE 6006
 # /workspace contains NVIDIA tutorials and example code
 WORKDIR /workspace
 
+# Install some extra packages to ease development
+RUN apt-get update && \
+    apt-get install -y sudo && \
+    rm -rf /var/lib/apt/*
+
 # Copy in start.sh to handle custom UID
 COPY start.sh /root/start.sh
 

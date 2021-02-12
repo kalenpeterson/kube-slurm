@@ -15,6 +15,8 @@ echo "SLURMD_NODENAME: ${SLURMD_NODENAME}"
 KUBE_JOB_NAME=slurm-job-${SLURM_JOB_ID}
 KUBE_JOB_UID=$(id -u)
 KUBE_JOB_GID=$(id -g)
+KUBE_JOB_USER=$(id -un)
+KUBE_JOB_GROUP=$(id -gn)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
 KUBE_INIT_TIMEOUT=600
@@ -112,9 +114,6 @@ metadata:
   labels:
     app: ${KUBE_JOB_NAME}
 spec:
-  securityContext:
-    runAsUser: ${KUBE_JOB_UID}
-    runAsGroup: ${KUBE_JOB_GID}
   volumes:
   - name: workspace
     hostPath:
@@ -130,6 +129,14 @@ spec:
     env:
     - name: NB_TOKEN
       value: ${JUPYTER_TOKEN}
+    - name: NB_USER
+      value: ${KUBE_JOB_USER}
+    - name: NB_UID
+      value: "${KUBE_JOB_UID}"
+    - name: NB_GROUP
+      value: ${KUBE_JOB_GROUP}
+    - name: NB_GID
+      value: "${KUBE_JOB_GID}"
     ports:
     - name: jupyter-http
       containerPort: ${KUBE_TARGET_PORT}
