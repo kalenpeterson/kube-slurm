@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=slurm-single-job
-#SBATCH --output=/tmp/slurm-single-job.log
+#SBATCH --job-name=slurm-jupyter-job
+#SBATCH --output=//nas/volumes/homes/dgx/slurm-jupyter-job.log
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=100
 #SBATCH --gpus=2

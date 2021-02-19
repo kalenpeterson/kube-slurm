@@ -1,7 +1,6 @@
-[dgxadmin@erisxdl1 templates]$ cat slurm-single-job.sh
 #!/bin/bash
 #SBATCH --job-name=slurm-single-job
-#SBATCH --output=/tmp/slurm-single-job.log
+#SBATCH --output=/nas/volumes/homes/dgx/slurm-single-job.log
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=100
 #SBATCH --gpus=2
