@@ -9,7 +9,7 @@ Tools for managing Kubernetes resources as slurm jobs.
 
 ## Why?
 
-These tools are designed for use with an Nvidia DGX Pod, deployed with the [NVIDIA DeepOps](https://github.com/NVIDIA/deepops) framework. Specifially, these wrappers allow slurm to be used by users to create pods (and other resources) in kubernetes and provides a better way to control time-sharing.
+These tools are designed for use with an Nvidia DGX Pod, deployed with Slurm and Kubernetes. Specifially, these wrappers allow slurm to be used by users to create pods (and other resources) in kubernetes and provides a better way to control time-sharing.
 
 The default Kubernetes scheduler does not implement concepts like slurm's "fair-share" to help with allocating resources to users. A hybrid approach can maximize the strengths of both scheduling systems. 
 
