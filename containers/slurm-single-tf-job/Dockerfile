@@ -10,10 +10,6 @@ RUN chmod +x /usr/local/bin/lmod
 
 # Set Envs
 ENV KUBE_SCRIPT=${KUBE_SCRIPT}
-ENV HOME=${USER_HOME}
-
-# Set current working dir
-WORKDIR ${HOME}
 
 # Run Requested Script
 ENTRYPOINT ["/bin/bash"]
