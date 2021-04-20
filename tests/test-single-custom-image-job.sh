@@ -8,7 +8,6 @@ export SLURM_JOB_ID=99
 export SLURM_JOB_NAME=slurm-single-job
 export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-node01
-export USER_HOME=${HOME}
 
 # Define the Image to run
 export KUBE_IMAGE=tensorflow:custom
