@@ -24,12 +24,14 @@ KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT}
 KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL}
 KUBE_NAMESPACE=${KUBE_NAMESPACE}
 KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS}
+KUBE_INGRESS_PREFIX="/jupyter"
+USER_HOME=${HOME}
 
 # Setup Kubeconfig
 export KUBECONFIG=${KUBECONFIG}
 
 # Print Kube ENV Vars
-echo 
+echo
 echo "Kube ENV Vars:"
 echo "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
 echo "KUBE_JOB_UID: ${KUBE_JOB_UID}"
@@ -43,6 +45,8 @@ echo "KUBE_INIT_TIMEOUT: ${KUBE_INIT_TIMEOUT}"
 echo "KUBE_POD_MONITOR_INTERVAL: ${KUBE_POD_MONITOR_INTERVAL}"
 echo "KUBE_NAMESPACE: ${KUBE_NAMESPACE}"
 echo "KUBE_CLUSTER_DNS: ${KUBE_CLUSTER_DNS}"
+echo "KUBE_INGRESS_PREFIX: ${KUBE_INGRESS_PREFIX}"
+echo "User Home: ${USER_HOME}"
 
 ## Manage Logging
 function log () {
@@ -56,6 +60,7 @@ function cleanup () {
   WATCH_POD=false
   kubectl get pod ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null && kubectl delete pod ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE}
   kubectl get service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null && kubectl delete service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE}
+  kubectl get ingress ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null && kubectl delete ingress ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE}
 }
 trap cleanup EXIT # Normal Exit
 trap cleanup SIGTERM # Termination from SLurm
@@ -89,9 +94,29 @@ EOF
 JUPYTER_TOKEN=$(openssl rand -hex 24)
 log "Generated Jupyter Token: '${JUPYTER_TOKEN}'"
 
-## Generate Notebook URL
-NODE_PORT=$(kubectl describe service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} |grep NodePort: |awk '{print $3}' |awk -F/ '{print $1}')
-JUPYTER_URL="http://${KUBE_CLUSTER_DNS}:${NODE_PORT}/?token=${JUPYTER_TOKEN}"
+## Create Ingress
+log "Creating Notebook Ingress"
+cat <<EOF | kubectl create -n ${KUBE_NAMESPACE} -f -
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: ${KUBE_JOB_NAME}
+spec:
+  rules:
+  - host: ${KUBE_CLUSTER_DNS}
+    http:
+      paths:
+      - path: "${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}"
+        backend:
+          serviceName: ${KUBE_JOB_NAME}
+          servicePort: ${KUBE_TARGET_PORT}
+EOF
+
+## Generate Notebook URL (Ingress)
+#NODE_PORT=$(kubectl describe service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} |grep NodePort: |awk '{print $3}' |awk -F/ '{print $1}')
+JUPYTER_URL="https://${KUBE_CLUSTER_DNS}${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}?token=${JUPYTER_TOKEN}"
+#JUPYTER_URL="http://${KUBE_CLUSTER_DNS}:${NODE_PORT}/?token=${JUPYTER_TOKEN}"
 echo "########################################################"
 echo "Your Jupyter Notebook URL will be: ${JUPYTER_URL}"
 echo "########################################################"
@@ -116,15 +141,27 @@ metadata:
     app: ${KUBE_JOB_NAME}
 spec:
   volumes:
+  - name: apps
+    hostPath:
+      type: Directory
+      path: /apps
+  - name: data
+    hostPath:
+      type: Directory
+      path: /data
   - name: workspace
     hostPath:
       type: Directory
-      path: ${KUBE_WORK_VOLUME}
+      path: ${USER_HOME}
   restartPolicy: Never
   containers:
   - name: ${KUBE_JOB_NAME}
     image: ${KUBE_IMAGE}
     volumeMounts:
+    - name: apps
+      mountPath: /apps
+    - name: data
+      mountPath: /data
     - name: workspace
       mountPath: /workspace
     env:
@@ -138,6 +175,8 @@ spec:
       value: ${KUBE_JOB_GROUP}
     - name: NB_GID
       value: "${KUBE_JOB_GID}"
+    - name: NB_PREFIX
+      value: "${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}"
     ports:
     - name: jupyter-http
       containerPort: ${KUBE_TARGET_PORT}
