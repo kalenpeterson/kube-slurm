@@ -1,0 +1,20 @@
+---
+nameOvveride: "slurm-db"
+auth:
+  rootPassword: ""
+  database: "slurm_acct_db"
+  username: "slurm"
+  password: ""
+primary:"
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  service:
+    type: "LoadBalancer"
+    type: "NodePort"
+    # nodePorts:
+    #   mysql: "30306"
+  persistence:
+    enabled: true
+    size: "50Gi"
+volumePermissions:
+  enabled: true
