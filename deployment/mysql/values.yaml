@@ -1,18 +1,24 @@
 ---
-nameOvveride: "slurm-db"
+nameOverride: "slurm-db"
+namespaceOverride: "slurm-db"
+global:
+  imageRegistry: "Fill in"
+  imagePullSecrets:
+    - SECRETName
+  storageClass: ""
 auth:
   rootPassword: ""
   database: "slurm_acct_db"
   username: "slurm"
   password: ""
-primary:"
+primary:
   nodeSelector:
     node-role.kubernetes.io/master: ""
   service:
-    type: "LoadBalancer"
+    #type: "LoadBalancer"
     type: "NodePort"
-    # nodePorts:
-    #   mysql: "30306"
+    nodePorts:
+      mysql: "30306"
   persistence:
     enabled: true
     size: "50Gi"

@@ -13,6 +13,15 @@ mysqldump --all-databases --single-transaction --quick --lock-tables=false > ful
 
 sudo mysqldump -u root slurm_acct_db > slurm_acct_db.$(date +"%Y%m%d").sql
 ```
+## Stage Images in Container repo
+This is required if you want to use the local repo for the images. Probobly a good idea.
+
+### MariaDb Chart v11.0.13
+```
+docker.io/bitnami/bitnami-shell:11-debian-11-r3
+docker.io/bitnami/bitnami/mysqld-exporter:0.14.0-debian-11-r3
+docker.io/bitnami/bitnami/bitnami/mariadb:10.6.8-debian-11-r3
+```
 
 ## Deploy MySQL With Bitnami Helm Chart
 Install Helm
@@ -30,7 +39,8 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 kubectl create namespace slurm-db
 helm install slurm-mysql-db bitnami/mariadb \
     --namespace slurm-db \
-    --values ./values.yaml
+    --values ./values.yaml \
+    --version 11.0.13
 ```
 
 ## Prepare MySQL DB
