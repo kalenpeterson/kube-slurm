@@ -4,10 +4,14 @@ set -e
 if [ "$1" = "slurmdbd" ]
 then
     echo "---> Starting the MUNGE Authentication service (munged) ..."
+    [[ -f /etc/munge/munge.key ]] || mungekey --create && chown munge /etc/munge/munge.key
     gosu munge /usr/sbin/munged
 
     echo "---> Starting the Slurm Database Daemon (slurmdbd) ..."
-
+    cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
+    cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
+    chown -R slurm /etc/slurm/*.conf
+    chown -R slurm /var/log/slurm*
     {
         . /etc/slurm/slurmdbd.conf
         until echo "SELECT 1" | mysql -h $StorageHost -u$StorageUser -p$StoragePass 2>&1 > /dev/null
@@ -36,6 +40,12 @@ then
     echo "-- slurmdbd is now active ..."
 
     echo "---> Starting the Slurm Controller Daemon (slurmctld) ..."
+    cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
+    cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
+    chown -R slurm /etc/slurm/*.conf
+    chown -R slurm /var/log/slurm*
+    chown -R slurm /var/lib/slurm*
+    chown -R slurm /var/spool/slurm*
     exec gosu slurm /usr/sbin/slurmctld -Dvvv
 fi
 
@@ -54,6 +64,8 @@ then
     echo "-- slurmctld is now active ..."
 
     echo "---> Starting the Slurm Node Daemon (slurmd) ..."
+    cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
+    cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
     exec /usr/sbin/slurmd -Dvvv
 fi
 

@@ -21,3 +21,9 @@ To Delete
 kubectl delete -n slurm-db -f ./mysql-deploy.yaml
 ```
 
+## Alter Password to support older plugins
+```
+ALTER USER 'slurm'@'%' IDENTIFIED WITH mysql_native_password BY 'youpassword';
+GRANT ALL ON slurm_acct_db.* to 'slurm'@'%';
+FLUSH PRIVILEGES;
+```

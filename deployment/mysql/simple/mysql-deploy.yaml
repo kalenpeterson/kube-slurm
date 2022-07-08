@@ -19,7 +19,7 @@ spec:
         node-role.kubernetes.io/master: ""
       containers:
         - name: mysql
-          image: docker.io/mariadb:10.6.8
+          image: docker.io/mysql:8.0.29
           livenessProbe:
             exec:
               command:
@@ -111,16 +111,17 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mysql-external
-  labels:
-    name: mysql
+  annotations:
+    metallb.universe.tf/address-pool: internal-mysql
 spec:
-  type: NodePort
-  ports:
-    - port: 3306
-      nodePort: 30036
-      name: mysql
   selector:
-    name: mysql
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+      name: mysql
+  type: LoadBalancer
 
 ---
 kind: Secret
@@ -128,8 +129,8 @@ apiVersion: v1
 metadata:
   name: mysql
 stringData:
-  database-name: 'slurm_acct_db'
+  database-name: ''
   database-password: ''
   database-root-password: ''
-  database-user: 'slurm'
+  database-user: ''
 type: Opaque

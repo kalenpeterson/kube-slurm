@@ -1,138 +1,9 @@
 ---
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: slurm-master
-  labels:
-    app: slurm-master
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: slurm-master
-  template:
-    metadata:
-      labels:
-        app: slurm-master
-    spec:
-      containers:
-        - name: slurmdbd
-          image: slurm-docker-cluster:v1
-          imagePullPolicy: IfNotPresent
-          command: ["slurmdbd"]
-          ports:
-            - 6819
-          livenessProbe:
-            failureThreshold: 3
-            tcpSocket:
-              port: 6819
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          readinessProbe:
-            failureThreshold: 3
-            tcpSocket:
-              port: 6819
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          volumeMounts:
-            - mountPath: /etc/slurm/slurm.conf
-              name: slurm
-            - mountPath: /etc/slurm/slurmdbd.conf
-              name: slurmdbd
-            - mountPath: /etc/munge
-              name: munge
-            - mountPath: /var/log/slurm
-              name: log
-        - name: slurmctld
-          image: slurm-docker-cluster:v1
-          imagePullPolicy: IfNotPresent
-          command: ["slurmctld"]
-          ports:
-            - 6817
-          livenessProbe:
-            failureThreshold: 3
-            tcpSocket:
-              port: 6817
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          readinessProbe:
-            failureThreshold: 3
-            tcpSocket:
-              port: 6817
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          volumeMounts:
-            - mountPath: /etc/slurm/slurm.conf
-              name: slurm
-            - mountPath: /etc/slurm/slurmdbd.conf
-              name: slurmdbd
-            - mountPath: /etc/munge
-              name: munge
-            - mountPath: /var/log/slurm
-              name: log
-            - mountPath: /data
-              name: data
-        - name: slurmd
-          image: slurm-docker-cluster:v1
-          imagePullPolicy: IfNotPresent
-          command: ["slurmd"]
-          volumeMounts:
-            - mountPath: /etc/slurm/slurm.conf
-              name: slurm
-            - mountPath: /etc/slurm/slurmdbd.conf
-              name: slurmdbd
-            - mountPath: /etc/munge
-              name: munge
-            - mountPath: /var/log/slurm
-              name: log
-            - mountPath: /data
-              name: data
-      volumes:
-        - name: slurm
-          configMap:
-            name: slurm-config
-            items:
-            - key: slurm.conf
-              path: keys
-        - name: slurmdbd
-          configMap:
-            name: slurm-config
-            items:
-            - key: slurmdbd.conf
-              path: keys
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
-      restartPolicy: Always
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: slurm-master
-spec:
-  selector:
-    app: slurm-master
-  ports:
-    - protocol: TCP
-      port: 6817
-      targetPort: 6817
-    - protocol: TCP
-      port: 6818
-      targetPort: 6818
-  type: LoadBalancer
-
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   creationTimestamp: 2016-02-18T18:52:05Z
   name: slurm-config
-  namespace: default
 data:
   slurm.conf: |
     # slurm.conf
@@ -160,7 +31,7 @@ data:
     SlurmdPidFile=/var/run/slurmd/slurmd.pid
     ProctrackType=proctrack/linuxproc
     #PluginDir=
-    CacheGroups=0
+    #CacheGroups=0
     #FirstJobId=
     ReturnToService=0
     #MaxJobCount=
@@ -220,15 +91,25 @@ data:
     AccountingStorageType=accounting_storage/slurmdbd
     AccountingStorageHost=slurmdbd
     AccountingStoragePort=6819
-    AccountingStorageLoc=slurm_acct_db
+    #AccountingStorageLoc=slurm_acct_db
     #AccountingStoragePass=
     #AccountingStorageUser=
     #
     # COMPUTE NODES
-    NodeName=c[1-2] RealMemory=1000 State=UNKNOWN
+    GresTypes=gpu
+    NodeName=nvidia-node01  Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
+    NodeName=nvidia-node02   Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
+    NodeName=slurmd RealMemory=1000 State=UNKNOWN
     #
     # PARTITIONS
-    PartitionName=normal Default=yes Nodes=c[1-2] Priority=50 DefMemPerCPU=500 Shared=NO MaxNodes=2 MaxTime=5-00:00:00 DefaultTime=5-00:00:00 State=UP
+    PartitionName=Test Default=yes Nodes=slurmd MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
+
+    PartitionName=Basic Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO 
+    PartitionName=Short Nodes=ALL MaxTime=01:00:00 DefaultTime=01:00:00 State=UP OverSubscribe=NO
+    PartitionName=Medium Nodes=ALL MaxTime=04:00:00 DefaultTime=04:00:00 State=UP OverSubscribe=NO
+    PartitionName=Long Nodes=ALL MaxTime=10:00:00 DefaultTime=10:00:00 State=UP OverSubscribe=NO
+    PartitionName=Mammoth Nodes=ALL MaxTime=14-00:00:00 DefaultTime=14-00:00:00 State=UP OverSubscribe=NO
+
 
   slurmdbd.conf: |
     #
@@ -266,5 +147,386 @@ data:
     StorageType=accounting_storage/mysql
     StorageHost=mysql
     StorageUser=slurm
-    StoragePass=password
+    StoragePass=REDACTED
     StorageLoc=slurm_acct_db
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slurmdbd
+  labels:
+    app: slurmdbd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slurmdbd
+  template:
+    metadata:
+      labels:
+        app: slurmdbd
+    spec:
+      hostname: slurmdbd
+      containers:
+        # slurmdbd
+        - name: slurmdbd
+          image: slurm-docker-cluster:v12
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/docker-entrypoint.sh"]
+          args:
+            - "slurmdbd"
+          # command: ["/bin/sh", "-c"]
+          # args:
+          #   - "sleep infinity"
+          ports:
+            - name: slurmdbd
+              protocol: TCP
+              containerPort: 6819
+          livenessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6819
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6819
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          volumeMounts:
+            - mountPath: /etc/slurm/slurm.conf.injected
+              subPath: slurm.conf
+              name: slurm-config
+            - mountPath: /etc/slurm/slurmdbd.conf.injected
+              subPath: slurmdbd.conf
+              name: slurm-config
+            - mountPath: /etc/munge
+              name: etc-munge
+            - mountPath: /var/log/slurm
+              name: var-log-slurm
+      volumes:
+        - name: slurm-config
+          configMap:
+            name: slurm-config
+            defaultMode: 0600
+        - name: etc-munge
+          persistentVolumeClaim:
+            claimName: etc-munge
+        - name: var-log-slurm
+          persistentVolumeClaim:
+            claimName: var-log-slurm
+        - name: var-lib-slurmd
+          persistentVolumeClaim:
+            claimName: var-lib-slurmd
+        - name: var-spool-slurmd
+          persistentVolumeClaim:
+            claimName: var-spool-slurmd
+        - name: data
+          hostPath:
+            path: /nas/slurm/data
+            type: Directory
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slurmctld
+  labels:
+    app: slurmctld
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slurmctld
+  template:
+    metadata:
+      labels:
+        app: slurmctld
+    spec:
+      hostname: slurmctld
+      containers:
+      #  slurmctld
+        - name: slurmctld
+          image: slurm-docker-cluster:v12
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/docker-entrypoint.sh"]
+          args:
+            - "slurmctld"
+          # command: ["/bin/sh", "-c"]
+          # args:
+          #   - "sleep infinity"
+          ports:
+            - name: slurmctld
+              protocol: TCP
+              containerPort: 6817
+          livenessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6817
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6817
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          volumeMounts:
+            - mountPath: /etc/slurm/slurm.conf.injected
+              subPath: slurm.conf
+              name: slurm-config
+            - mountPath: /etc/slurm/slurmdbd.conf.injected
+              subPath: slurmdbd.conf
+              name: slurm-config
+            - mountPath: /etc/munge
+              name: etc-munge
+            - mountPath: /var/log/slurm
+              name: var-log-slurm
+            - mountPath: /var/lib/slurmd
+              name: var-lib-slurmd
+            - mountPath: /var/spool/slurmd
+              name: var-spool-slurmd
+            - mountPath: /data
+              name: data
+      volumes:
+        - name: slurm-config
+          configMap:
+            name: slurm-config
+            defaultMode: 0600
+        - name: etc-munge
+          persistentVolumeClaim:
+            claimName: etc-munge
+        - name: var-log-slurm
+          persistentVolumeClaim:
+            claimName: var-log-slurm
+        - name: var-lib-slurmd
+          persistentVolumeClaim:
+            claimName: var-lib-slurmd
+        - name: var-spool-slurmd
+          persistentVolumeClaim:
+            claimName: var-spool-slurmd
+        - name: data
+          hostPath:
+            path: /nas/slurm/data
+            type: Directory
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slurmd
+  labels:
+    app: slurmd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slurmd
+  template:
+    metadata:
+      labels:
+        app: slurmd
+    spec:
+      hostname: slurmd
+      containers:
+      #  slurmd
+        - name: slurmd
+          image: slurm-docker-cluster:v12
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/docker-entrypoint.sh"]
+          args:
+            - "slurmd"
+          #command: ["slurmd"]
+          # command: ["/bin/sh", "-c"]
+          # args:
+          #   - "sleep infinity"
+          ports:
+            - name: slurmd
+              protocol: TCP
+              containerPort: 6818
+          livenessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6818
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 6818
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            initialDelaySeconds: 5
+          volumeMounts:
+            - mountPath: /etc/slurm/slurm.conf.injected
+              subPath: slurm.conf
+              name: slurm-config
+            - mountPath: /etc/munge
+              name: etc-munge
+            - mountPath: /var/log/slurm
+              name: var-log-slurm
+            - mountPath: /nas/slurm/data
+              name: data
+      volumes:
+        - name: slurm-config
+          configMap:
+            name: slurm-config
+            defaultMode: 0600
+        - name: etc-munge
+          persistentVolumeClaim:
+            claimName: etc-munge
+        - name: var-log-slurm
+          persistentVolumeClaim:
+            claimName: var-log-slurm
+        # - name: var-lib-slurmd
+        #   persistentVolumeClaim:
+        #     claimName: var-lib-slurmd
+        # - name: var-spool-slurmd
+        #   persistentVolumeClaim:
+        #     claimName: var-spool-slurmd
+        - name: data
+          hostPath:
+            path: /nas/slurm/data
+            type: Directory
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: etc-munge
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: panfs
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: var-log-slurm
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: panfs
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: var-lib-slurmd
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: panfs
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: var-spool-slurmd
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: panfs
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmdbd-external
+  annotations:
+    metallb.universe.tf/address-pool: internal-slurmdbd
+spec:
+  selector:
+    app: slurmdbd
+  ports:
+    - protocol: TCP
+      port: 6819
+      targetPort: 6819
+      name: slurm-slurmdbd
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmctld-external
+  annotations:
+    metallb.universe.tf/address-pool: internal-slurmctld
+spec:
+  selector:
+    app: slurmctld
+  ports:
+    - protocol: TCP
+      port: 6817
+      targetPort: 6817
+      name: slurmctld
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmdbd
+spec:
+  selector:
+    app: slurmdbd
+  ports:
+    - protocol: TCP
+      port: 6819
+      targetPort: 6819
+      name: slurm-slurmdbd
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmctld
+spec:
+  selector:
+    app: slurmctld
+  ports:
+    - protocol: TCP
+      port: 6817
+      targetPort: 6817
+      name: slurmctld
+  type: ClusterIP

@@ -1,0 +1,9 @@
+FROM debian:11
+
+RUN apt-get update -y && \
+    apt-get install -y slurm-wlm slurmctld slurmd slurmctld gosu munge
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+CMD ["slurmdbd"]
