@@ -1,6 +1,6 @@
 #!/bin/bash
 ## Manage Single-Run Job Pods from Slurm
-source ../config/settings.sh
+#source ../config/settings.sh
 
 # Print Slurm ENV Vars
 echo
@@ -18,15 +18,18 @@ KUBE_JOB_UID=$(id -u)
 KUBE_JOB_GID=$(id -g)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
-KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT}
-KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL}
-KUBE_NAMESPACE=${KUBE_NAMESPACE}
+KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT:=600}
+KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL:=10}
+KUBE_NAMESPACE=${KUBE_NAMESPACE:=slurm}
 USER_HOME=${HOME}
 KUBE_SCRIPT=${KUBE_SCRIPT}
 KUBE_IMAGE=${KUBE_IMAGE}
+KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS:=nvidia-pod}
+KUBE_DATA_VOLUME=${KUBE_DATA_VOLUME}
+KUBE_JOB_FSGID=${KUBE_JOB_FSGID}
 
 # Setup Kubeconfig
-export KUBECONFIG=${KUBECONFIG}
+export KUBECONFIG=${KUBECONFIG:=~/.kube/config}
 
 # Print Kube ENV Vars
 echo 
@@ -35,7 +38,7 @@ echo "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
 echo "KUBE_JOB_UID: ${KUBE_JOB_UID}"
 echo "KUBE_JOB_GID: ${KUBE_JOB_GID}"
 echo "KUBE_IMAGE: ${KUBE_IMAGE}"
-echo "KUBE_WORK_VOLUME: ${KUBE_WORK_VOLUME}"
+echo "KUBE_DATA_VOLUME: ${KUBE_DATA_VOLUME}"
 echo "KUBE_NODE: ${KUBE_NODE}"
 echo "KUBE_GPU_COUNT: ${KUBE_GPU_COUNT}"
 echo "KUBE_INIT_TIMEOUT: ${KUBE_INIT_TIMEOUT}"
@@ -43,7 +46,7 @@ echo "KUBE_POD_MONITOR_INTERVAL: ${KUBE_POD_MONITOR_INTERVAL}"
 echo "KUBE_NAMESPACE: ${KUBE_NAMESPACE}"
 echo "USER_HOME: ${USER_HOME}"
 echo "KUBE_SCRIPT: ${KUBE_SCRIPT}"
-echo "KUBE_IMAGE: ${KUBE_IMAGE}"
+echo "KUBE_CLUSTER_DNS: ${KUBE_CLUSTER_DNS}"
 
 ## Manage Logging
 function log () {
@@ -55,10 +58,30 @@ WATCH_POD=true
 function cleanup () {
   log "Cleaning up resources"
   WATCH_POD=false
+  log "Deleting Pod, please wait for termination to complete"
   kubectl get pod ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null && kubectl delete pod ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE}
+  log "Completed cleanup"
 }
 trap cleanup EXIT # Normal Exit
 trap cleanup SIGTERM # Termination from Slurm
+
+function get_pod_error () {
+  NAMESPACE=$1
+  POD=$2
+  log "Collecting POD Events..."
+  kubectl describe pod -n ${NAMESPACE} ${POD} |grep -A20 Events
+  log "Collecting POD Logs"
+  kubectl logs -n ${NAMESPACE} ${POD}
+}
+
+## Check Data Volume and get it's GID
+log "Checking GID of KUBE_DATA_VOLUME"
+KUBE_JOB_FSGID=$(getfacl -nat "${KUBE_DATA_VOLUME}" 2>/dev/null |grep ^GROUP |awk '{print $2}')
+echo "KUBE_JOB_FSGID: ${KUBE_JOB_FSGID}"
+if [[ "${KUBE_JOB_FSGID}" == "" || "${DATA_VOLUME_GID}" == "0" ]]; then
+  log "ERROR: Failed to get GID of KUBE_DATA_VOLUME OR GID was 0"
+  exit 1
+fi
 
 ## Ensure Namespace Exists
 log "Setting up Namespace"
@@ -83,7 +106,7 @@ metadata:
 spec:
   securityContext:
     runAsUser: ${KUBE_JOB_UID}
-    runAsGroup: ${KUBE_JOB_GID}
+    runAsGroup: ${KUBE_JOB_FSGID}
   volumes:
   - name: apps
     hostPath:
@@ -92,7 +115,7 @@ spec:
   - name: data
     hostPath:
       type: Directory
-      path: /data
+      path: "${KUBE_DATA_VOLUME}"
   - name: home
     hostPath:
       type: Directory
@@ -102,6 +125,8 @@ spec:
   - name: ${KUBE_JOB_NAME}
     image: ${KUBE_IMAGE}
     workingDir: "${USER_HOME}"
+    command: ["bash"]
+    args: ["${KUBE_SCRIPT}"]
     env:
     - name: HOME
       value: "${USER_HOME}"
@@ -111,7 +136,7 @@ spec:
     - name: apps
       mountPath: /apps
     - name: data
-      mountPath: /data
+      mountPath: "${KUBE_DATA_VOLUME}"
     - name: home
       mountPath: "${USER_HOME}"
     ${KUBE_GPU_LIMIT}
@@ -122,7 +147,15 @@ EOF
 
 ## Wait for Pod to Initialize
 log "Waiting ${KUBE_INIT_TIMEOUT} seconds for Pod to Initialize"
-kubectl wait --for=condition=Initialized --timeout=${KUBE_INIT_TIMEOUT}s -n ${KUBE_NAMESPACE} pods ${KUBE_JOB_NAME} || exit 2
+kubectl wait --for=condition=ready --timeout=${KUBE_INIT_TIMEOUT}s -n ${KUBE_NAMESPACE} pods ${KUBE_JOB_NAME}
+RC=$?
+
+## Check if Pod Started
+if [[ $RC -ne 0 ]]; then
+  log "Pod initilization failed or timed out, see following for troubleshooting"
+  get_pod_error ${KUBE_NAMESPACE} ${KUBE_JOB_NAME}
+  exit 2
+fi
 
 ## Monitor Pod status and print logs
 log "Pod Initialized, following logs (updates every ${KUBE_POD_MONITOR_INTERVAL}s)"
