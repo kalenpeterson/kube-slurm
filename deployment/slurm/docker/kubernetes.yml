@@ -96,15 +96,15 @@ data:
     #AccountingStorageUser=
     #
     # COMPUTE NODES
-    GresTypes=gpu
-    NodeName=nvidia-node01  Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
-    NodeName=nvidia-node02   Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
+    #GresTypes=gpu
+    NodeName=nvidia-node01  NodeAddr=10.227.209.181 Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
+    NodeName=nvidia-node02  NodeAddr=10.227.209.182 Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
     NodeName=slurmd RealMemory=1000 State=UNKNOWN
     #
     # PARTITIONS
-    PartitionName=Test Default=yes Nodes=slurmd MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
+    PartitionName=Test Default=yes Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
 
-    PartitionName=Basic Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO 
+    PartitionName=Basic Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
     PartitionName=Short Nodes=ALL MaxTime=01:00:00 DefaultTime=01:00:00 State=UP OverSubscribe=NO
     PartitionName=Medium Nodes=ALL MaxTime=04:00:00 DefaultTime=04:00:00 State=UP OverSubscribe=NO
     PartitionName=Long Nodes=ALL MaxTime=10:00:00 DefaultTime=10:00:00 State=UP OverSubscribe=NO
@@ -147,7 +147,7 @@ data:
     StorageType=accounting_storage/mysql
     StorageHost=mysql
     StorageUser=slurm
-    StoragePass=REDACTED
+    StoragePass=9dd1d5c19c293f0c417d6fb8
     StorageLoc=slurm_acct_db
 
 ---
@@ -171,7 +171,7 @@ spec:
       containers:
         # slurmdbd
         - name: slurmdbd
-          image: slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -253,10 +253,15 @@ spec:
         app: slurmctld
     spec:
       hostname: slurmctld
+      # Host Records for Nodes
+      hostAliases:
+        - ip: "10.227.209.181"
+          hostnames:
+            - "nvidia-node01"
       containers:
       #  slurmctld
         - name: slurmctld
-          image: slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -347,7 +352,7 @@ spec:
       containers:
       #  slurmd
         - name: slurmd
-          image: slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -529,4 +534,19 @@ spec:
       port: 6817
       targetPort: 6817
       name: slurmctld
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slurmd
+spec:
+  selector:
+    app: slurmd
+  ports:
+    - protocol: TCP
+      port: 6818
+      targetPort: 6818
+      name: slurmd
   type: ClusterIP
