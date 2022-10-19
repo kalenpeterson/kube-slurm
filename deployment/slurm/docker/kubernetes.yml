@@ -171,7 +171,7 @@ spec:
       containers:
         # slurmdbd
         - name: slurmdbd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -206,8 +206,6 @@ spec:
             - mountPath: /etc/slurm/slurmdbd.conf.injected
               subPath: slurmdbd.conf
               name: slurm-config
-            - mountPath: /etc/munge
-              name: etc-munge
             - mountPath: /var/log/slurm
               name: var-log-slurm
       volumes:
@@ -215,9 +213,6 @@ spec:
           configMap:
             name: slurm-config
             defaultMode: 0600
-        - name: etc-munge
-          persistentVolumeClaim:
-            claimName: etc-munge
         - name: var-log-slurm
           persistentVolumeClaim:
             claimName: var-log-slurm
@@ -261,7 +256,7 @@ spec:
       containers:
       #  slurmctld
         - name: slurmctld
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -296,8 +291,6 @@ spec:
             - mountPath: /etc/slurm/slurmdbd.conf.injected
               subPath: slurmdbd.conf
               name: slurm-config
-            - mountPath: /etc/munge
-              name: etc-munge
             - mountPath: /var/log/slurm
               name: var-log-slurm
             - mountPath: /var/lib/slurmd
@@ -311,9 +304,6 @@ spec:
           configMap:
             name: slurm-config
             defaultMode: 0600
-        - name: etc-munge
-          persistentVolumeClaim:
-            claimName: etc-munge
         - name: var-log-slurm
           persistentVolumeClaim:
             claimName: var-log-slurm
@@ -352,7 +342,7 @@ spec:
       containers:
       #  slurmd
         - name: slurmd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v12
+          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -385,8 +375,6 @@ spec:
             - mountPath: /etc/slurm/slurm.conf.injected
               subPath: slurm.conf
               name: slurm-config
-            - mountPath: /etc/munge
-              name: etc-munge
             - mountPath: /var/log/slurm
               name: var-log-slurm
             - mountPath: /nas/slurm/data
@@ -396,9 +384,6 @@ spec:
           configMap:
             name: slurm-config
             defaultMode: 0600
-        - name: etc-munge
-          persistentVolumeClaim:
-            claimName: etc-munge
         - name: var-log-slurm
           persistentVolumeClaim:
             claimName: var-log-slurm
@@ -415,20 +400,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: etc-munge
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: panfs
-  volumeMode: Filesystem
-  resources:
-    requests:
-      storage: 1Gi
 
 ---
 apiVersion: v1
