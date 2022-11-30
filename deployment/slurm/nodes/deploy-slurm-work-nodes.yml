@@ -1,0 +1,168 @@
+---
+- name: Install Slurm - Part 1
+  hosts: node
+  gather_facts: yes
+  become: yes
+  vars:
+    install_groups:
+    - name: munge
+      gid: 989
+    - name: slurm
+      gid: 988
+    install_users:
+    - name: munge
+      uid: 993
+      group: munge
+    - name: slurm
+      uid: 22078
+      group: slurm
+    
+  tasks:
+  - name: Create Groups
+    group:
+      name: "{{ item.name }}"
+      gid: "{{ item.gid }}"
+      state: present
+    loop:
+      "{{ install_groups }}"
+
+  - name: Create Users
+    user:
+      name: "{{ item.name }}"
+      uid: "{{ item.uid }}"
+      group: "{{ item.group }}"
+      system: yes
+      state: present
+    loop:
+      "{{ install_users }}"
+
+  - name: Install munge (Ubuntu)
+    apt:
+      name: munge
+      state: present
+    notify: Restart Munge
+    when: ansible_distribution == 'Ubuntu'
+
+  - name: Install Munge Key
+    copy:
+      src: files/munge.key
+      dest: /etc/munge/munge.key
+      owner: munge
+      group: munge
+      mode: '0400'
+    notify: Restart Munge
+
+  handlers:
+  - name: Restart Munge
+    service:
+      name: munge
+      state: restarted
+      enabled: yes
+
+- name: Install Slurm - Part 2
+  hosts: node
+  gather_facts: yes
+  become: yes
+  vars:
+    slurm_version: 'slurm-20.11.9'
+
+  tasks:
+  - name: Get Installed Slurm Version
+    shell:
+      cmd: slurmd --version |sed 's/\s/-/'
+      warn: false
+    register: slurmd_check
+    changed_when: false
+    failed_when: false
+
+  - name: Set Slurm Facts
+    set_fact:
+      slurm_package: "{{ slurm_version }}.tar.bz2"
+      installed_slurm_version: "{{ slurmd_check.stdout }}"
+
+  - name: Download Slurm Package locally
+    get_url:
+      url: "https://download.schedmd.com/slurm/{{ slurm_package }}"
+      dest: "/tmp/{{ slurm_package }}"
+    delegate_to: localhost
+    run_once: true
+
+  - name: Copy Slurm install to each node
+    copy:
+      src: "/tmp/{{ slurm_package }}"
+      dest: "/tmp/{{ slurm_package }}"
+
+  - name: Extract Slurm on each node
+    unarchive:
+      src: "/tmp/{{ slurm_package }}"
+      remote_src: yes
+      dest: /tmp
+
+  - name: Setup Slurm dirs
+    file:
+      path: "{{ item.path }}"
+      state: directory
+      owner: slurm
+      group: slurm
+      mode: "{{ item.mode }}"
+    loop:
+      - { path: '/etc/slurm', mode: '0755' }
+      - { path: '/var/log/slurm', mode: '0755' }
+
+  - name: Compile and Install Slurm Version
+    block:
+      - name: Run Install Config
+        command: ./configure --prefix=/usr/local --sysconfdir=/etc/slurm
+        args:
+          chdir: "/tmp/{{ slurm_version }}"
+
+      - name: Compile Slurm
+        command: make
+        args:
+          chdir: "/tmp/{{ slurm_version }}"
+
+      - name: Install Slurm
+        command: make install
+        args:
+          chdir: "/tmp/{{ slurm_version }}"
+    when: slurm_version != installed_slurm_version
+
+  - name: Copy Slurm.conf
+    copy:
+      src: files/slurm.conf
+      dest: /etc/slurm/slurm.conf
+      owner: slurm
+      group: slurm
+      mode: '0644'
+
+  - name: Create Systemd Service File
+    copy:
+      src: "/tmp/{{ slurm_version }}/etc/slurmd.service.in"
+      dest: /etc/systemd/system/slurmd.service
+      remote_src: yes
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Setup Hosts
+    lineinfile:
+      path: /etc/hosts
+      line: "{{ item }}"
+      state: present
+      backup: yes
+    loop:
+      - "10.227.209.203 slurmctld"
+      - "10.227.209.202 slurmdbd"
+
+  - name: Restart Slurmd
+    systemd:
+      name: slurmd.service
+      state: restarted
+      enabled: yes
+      daemon_reload: yes
+  
+  
+
+
+
+

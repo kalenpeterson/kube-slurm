@@ -97,8 +97,8 @@ data:
     #
     # COMPUTE NODES
     #GresTypes=gpu
-    NodeName=nvidia-node01  NodeAddr=10.227.209.181 Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
-    NodeName=nvidia-node02  NodeAddr=10.227.209.182 Gres=gpu:8     CPUs=2 Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 Procs=40 RealMemory=10000 State=UNKNOWN
+    NodeName=nvidia-node01  NodeAddr=10.227.209.181 RealMemory=7976 State=UNKNOWN
+    NodeName=nvidia-node02  NodeAddr=10.227.209.182 RealMemory=7976 State=UNKNOWN
     NodeName=slurmd RealMemory=1000 State=UNKNOWN
     #
     # PARTITIONS
@@ -109,6 +109,12 @@ data:
     PartitionName=Medium Nodes=ALL MaxTime=04:00:00 DefaultTime=04:00:00 State=UP OverSubscribe=NO
     PartitionName=Long Nodes=ALL MaxTime=10:00:00 DefaultTime=10:00:00 State=UP OverSubscribe=NO
     PartitionName=Mammoth Nodes=ALL MaxTime=14-00:00:00 DefaultTime=14-00:00:00 State=UP OverSubscribe=NO
+
+    # Set Srun Portrange
+    SrunPortRange=60001-60010
+
+    # Disable config hash check
+    DebugFlags=NO_CONF_HASH
 
 
   slurmdbd.conf: |
@@ -171,7 +177,7 @@ spec:
       containers:
         # slurmdbd
         - name: slurmdbd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
+          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -222,10 +228,6 @@ spec:
         - name: var-spool-slurmd
           persistentVolumeClaim:
             claimName: var-spool-slurmd
-        - name: data
-          hostPath:
-            path: /nas/slurm/data
-            type: Directory
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
@@ -256,7 +258,7 @@ spec:
       containers:
       #  slurmctld
         - name: slurmctld
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
+          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -268,6 +270,26 @@ spec:
             - name: slurmctld
               protocol: TCP
               containerPort: 6817
+            - protocol: TCP
+              containerPort: 60001
+            - protocol: TCP
+              containerPort: 60002
+            - protocol: TCP
+              containerPort: 60003
+            - protocol: TCP
+              containerPort: 60004
+            - protocol: TCP
+              containerPort: 60005
+            - protocol: TCP
+              containerPort: 60006
+            - protocol: TCP
+              containerPort: 60007
+            - protocol: TCP
+              containerPort: 60008
+            - protocol: TCP
+              containerPort: 60009
+            - protocol: TCP
+              containerPort: 60010
           livenessProbe:
             failureThreshold: 3
             tcpSocket:
@@ -297,8 +319,8 @@ spec:
               name: var-lib-slurmd
             - mountPath: /var/spool/slurmd
               name: var-spool-slurmd
-            - mountPath: /data
-              name: data
+            - mountPath: /nas
+              name: nas
       volumes:
         - name: slurm-config
           configMap:
@@ -313,9 +335,9 @@ spec:
         - name: var-spool-slurmd
           persistentVolumeClaim:
             claimName: var-spool-slurmd
-        - name: data
+        - name: nas
           hostPath:
-            path: /nas/slurm/data
+            path: /nas
             type: Directory
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -342,7 +364,7 @@ spec:
       containers:
       #  slurmd
         - name: slurmd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:v18
+          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -377,8 +399,8 @@ spec:
               name: slurm-config
             - mountPath: /var/log/slurm
               name: var-log-slurm
-            - mountPath: /nas/slurm/data
-              name: data
+            - mountPath: /nas
+              name: nas
       volumes:
         - name: slurm-config
           configMap:
@@ -393,9 +415,9 @@ spec:
         # - name: var-spool-slurmd
         #   persistentVolumeClaim:
         #     claimName: var-spool-slurmd
-        - name: data
+        - name: nas
           hostPath:
-            path: /nas/slurm/data
+            path: /nas
             type: Directory
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -475,6 +497,46 @@ spec:
       port: 6817
       targetPort: 6817
       name: slurmctld
+    - protocol: TCP
+      port: 60001
+      targetPort: 60001
+      name: srun-60001
+    - protocol: TCP
+      port: 60002
+      targetPort: 60002
+      name: srun-60002
+    - protocol: TCP
+      port: 60003
+      targetPort: 60003
+      name: srun-60003
+    - protocol: TCP
+      port: 60004
+      targetPort: 60004
+      name: srun-600014
+    - protocol: TCP
+      port: 60005
+      targetPort: 60005
+      name: srun-60005
+    - protocol: TCP
+      port: 60006
+      targetPort: 60006
+      name: srun-60006
+    - protocol: TCP
+      port: 60007
+      targetPort: 60007
+      name: srun-60007
+    - protocol: TCP
+      port: 60008
+      targetPort: 60008
+      name: srun-60008
+    - protocol: TCP
+      port: 60009
+      targetPort: 60009
+      name: srun-60009
+    - protocol: TCP
+      port: 60010
+      targetPort: 60010
+      name: srun-60010
   type: LoadBalancer
 
 ---
@@ -505,6 +567,46 @@ spec:
       port: 6817
       targetPort: 6817
       name: slurmctld
+    - protocol: TCP
+      port: 60001
+      targetPort: 60001
+      name: srun-60001
+    - protocol: TCP
+      port: 60002
+      targetPort: 60002
+      name: srun-60002
+    - protocol: TCP
+      port: 60003
+      targetPort: 60003
+      name: srun-60003
+    - protocol: TCP
+      port: 60004
+      targetPort: 60004
+      name: srun-600014
+    - protocol: TCP
+      port: 60005
+      targetPort: 60005
+      name: srun-60005
+    - protocol: TCP
+      port: 60006
+      targetPort: 60006
+      name: srun-60006
+    - protocol: TCP
+      port: 60007
+      targetPort: 60007
+      name: srun-60007
+    - protocol: TCP
+      port: 60008
+      targetPort: 60008
+      name: srun-60008
+    - protocol: TCP
+      port: 60009
+      targetPort: 60009
+      name: srun-60009
+    - protocol: TCP
+      port: 60010
+      targetPort: 60010
+      name: srun-60010
   type: ClusterIP
 
 ---
