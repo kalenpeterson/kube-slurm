@@ -1,21 +1,9 @@
 ---
-- name: Install Slurm - Part 1
+- name: Install Slurm - Part 1 (Dependencies and Munge)
   hosts: all
   gather_facts: yes
   become: yes
-  vars:
-    install_groups:
-    - name: munge
-      gid: 989
-    - name: slurm
-      gid: 988
-    install_users:
-    - name: munge
-      uid: 993
-      group: munge
-    - name: slurm
-      uid: 22078
-      group: slurm
+  any_errors_fatal: yes
     
   tasks:
   - name: Create Groups
@@ -35,6 +23,27 @@
       state: present
     loop:
       "{{ install_users }}"
+
+  - name: Install Dependencies (CentOS)
+    yum:
+      name:
+        - openssl
+        - openssl-devel
+        - pam-devel
+        - numactl
+        - numactl-devel
+        - hwloc
+        - hwloc-devel
+        - lua
+        - lua-devel
+        - readline-devel
+        - rrdtool-devel
+        - ncurses-devel
+        - man2html
+        - libibmad
+        - libibumad
+      state: present
+    when: ansible_distribution == 'CentOS'
 
   - name: Install munge (Ubuntu)
     apt:
@@ -66,18 +75,15 @@
       state: restarted
       enabled: yes
 
-- name: Install Slurm - Part 2
+- name: Install Slurm - Part 2 (Download, Compile, Install Slurm)
   hosts: all
   gather_facts: yes
   become: yes
-  vars:
-    slurm_version: 'slurm-20.11.9'
-    force_install: true
 
   tasks:
   - name: Get Installed Slurm Version
     shell:
-      cmd: slurmd --version |sed 's/\s/-/'
+      cmd: /usr/local/sbin/slurmd --version |sed 's/\s/-/'
       warn: false
     register: slurmd_check
     changed_when: false
@@ -88,26 +94,9 @@
       slurm_package: "{{ slurm_version }}.tar.bz2"
       installed_slurm_version: "{{ slurmd_check.stdout }}"
 
-  - name: Install Dependencies (CentOS)
-    yum:
-      name:
-        - openssl
-        - openssl-devel
-        - pam-devel
-        - numactl
-        - numactl-devel
-        - hwloc
-        - hwloc-devel
-        - lua
-        - lua-devel
-        - readline-devel
-        - rrdtool-devel
-        - ncurses-devel
-        - man2html
-        - libibmad
-        - libibumad
-      state: present
-    when: ansible_distribution == 'CentOS'
+  - name: Print Slurm Versions
+    debug:
+      msg: "Slurm Desired: '{{ slurm_version }}', Slurm Installed: '{{ installed_slurm_version }}'"
 
   - name: Create download stage dir on local host
     file:
@@ -123,17 +112,6 @@
     delegate_to: localhost
     run_once: true
 
-  - name: Copy Slurm install to each node
-    copy:
-      src: "/tmp/slurm-download-stage/{{ slurm_package }}"
-      dest: "/tmp/{{ slurm_package }}"
-
-  - name: Extract Slurm on each node
-    unarchive:
-      src: "/tmp/{{ slurm_package }}"
-      remote_src: yes
-      dest: /tmp
-
   - name: Setup Slurm dirs
     file:
       path: "{{ item.path }}"
@@ -145,8 +123,19 @@
       - { path: '/etc/slurm', mode: '0755' }
       - { path: '/var/log/slurm', mode: '0755' }
 
-  - name: Compile and Install Slurm Version
+  - name: Copy, Compile and Install Slurm Version
     block:
+      - name: Copy Slurm install to each node
+        copy:
+          src: "/tmp/slurm-download-stage/{{ slurm_package }}"
+          dest: "/tmp/{{ slurm_package }}"
+
+      - name: Extract Slurm on each node
+        unarchive:
+          src: "/tmp/{{ slurm_package }}"
+          remote_src: yes
+          dest: /tmp
+      
       - name: Run Install Config
         command: ./configure --prefix=/usr/local --sysconfdir=/etc/slurm
         args:
@@ -161,6 +150,7 @@
         command: make install
         args:
           chdir: "/tmp/{{ slurm_version }}"
+        notify: Reload Slurmd
     when: slurm_version != installed_slurm_version or
           force_install == true
 
@@ -171,6 +161,7 @@
       owner: slurm
       group: slurm
       mode: '0644'
+    notify: Reload Slurmd
 
   - name: Setup Hosts
     lineinfile:
@@ -178,28 +169,28 @@
       line: "{{ item }}"
       state: present
       backup: yes
-    loop:
-      - "10.227.209.203 slurmctld"
-      - "10.227.209.202 slurmdbd"
+    loop: "{{ hosts_file_entries }}"
 
-  - name: Setup slurm daemon
-    block:
-      - name: Create Systemd Service File
-        copy:
-          src: "/tmp/{{ slurm_version }}/etc/slurmd.service.in"
-          dest: /etc/systemd/system/slurmd.service
-          remote_src: yes
-          owner: root
-          group: root
-          mode: '0644'
-
-      - name: Restart Slurmd
-        systemd:
-          name: slurmd.service
-          state: restarted
-          enabled: yes
-          daemon_reload: yes
+  # Create the Slurmd Service file only on work nodes
+  - name: Create Slurmd Systemd Service File
+    copy:
+      src: "files/slurmd.service"
+      dest: /etc/systemd/system/slurmd.service
+      owner: root
+      group: root
+      mode: '0644'
+    notify: Reload Slurmd
     when: "'node' in group_names"
+
+  handlers:
+    # Reload Slumrd on a change, only on work nodes
+    - name: Reload Slurmd
+      systemd:
+        name: slurmd.service
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+      when: "'node' in group_names"
     
 
   

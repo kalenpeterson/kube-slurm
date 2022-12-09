@@ -1,0 +1,22 @@
+---
+## Define Group Names and IDs
+install_groups:
+  - name: munge
+    gid: 989
+  - name: slurm
+    gid: 988
+## Define User Names and IDs
+install_users:
+  - name: munge
+    uid: 993
+    group: munge
+  - name: slurm
+    uid: 22078
+    group: slurm
+# Set the Slurm version to install/upgrade to
+slurm_version: 'slurm-20.11.9'
+# Force slurm to be installed, even if it already is
+force_install: false
+hosts_file_entries:
+  - "10.227.209.203 slurmctld"
+  - "10.227.209.202 slurmdbd"
