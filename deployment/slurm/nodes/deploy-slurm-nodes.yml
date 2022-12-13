@@ -47,14 +47,18 @@
 
   - name: Install munge (Ubuntu)
     apt:
-      name: munge
+      name: 
+        - munge
+        - libmunge-dev
       state: present
     notify: Restart Munge
     when: ansible_distribution == 'Ubuntu'
 
   - name: Install munge (CentOS)
     yum:
-      name: munge
+      name:
+        - munge
+        - munge-devel
       state: present
     notify: Restart Munge
     when: ansible_distribution == 'CentOS'
