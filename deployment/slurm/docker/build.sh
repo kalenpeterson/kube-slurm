@@ -1,17 +1,25 @@
 #!/bin/bash
+# Build and Push the image for all defined ENVs
+
+# A version tag is required input and will be appended to the image tag
 VERSION_TAG=$1
-IMAGE_NAME=docker.io/kalenpeterson/slurm-docker-cluster
-
-log () {
-    echo $(date) [info] $1
-}
-
 if [[ -z ${VERSION_TAG} ]]; then
     echo "A Version tag must be provided"
     exit 1
 fi
 
-for env in nuc xdl
+# Define the Base Image Name
+IMAGE_NAME=docker.io/kalenpeterson/slurm-docker-cluster
+
+# Simple Logging function
+log () {
+    echo $(date) [info] $1
+}
+
+# Build each environment found in this directory
+#  Use the provided my.env.example as a base for your ENV
+#  cp my.env.example .my.env" and edit as needed
+for env in $(ls -a .*.env |awk -F. '{print $2}')
 do
     log "Building ${env} Image"
     cat .${env}.env \

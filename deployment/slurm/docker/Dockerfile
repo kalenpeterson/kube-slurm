@@ -73,12 +73,15 @@ RUN wget https://download.schedmd.com/slurm/slurm-$SLURM_VERSION.tar.bz2 && \
     touch /var/log/slurm/slurm_jobacct.log /var/log/slurm/slurm_jobcomp.log && \
     chown -R slurm:slurm /var/log/slurm/
 
-
+# Copy in the Entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Fix Munge Permissions
 RUN chmod +x /run/munge
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
+# Set the default startup service to slurmdbd
+#  Pass other service names to start them instead
 CMD ["slurmdbd"]

@@ -1,6 +1,13 @@
 #!/bin/bash
+# Slurm Cluster Entrypoint
+#  This is a common entrypoint so that a single image can be used for all slurm componets
+#  Passing the following ARGs will start the corrosponding service
+#   - slurmdbd
+#   - slurmctld
+#   - slurmd
 set -e
 
+## slurmdbd Entrypoint ##
 if [ "$1" = "slurmdbd" ]
 then
     echo "---> Starting the MUNGE Authentication service (munged) ..."
@@ -25,6 +32,7 @@ then
     exec gosu slurm /usr/sbin/slurmdbd -Dvvv
 fi
 
+## slurmdctld Entrypoint ##
 if [ "$1" = "slurmctld" ]
 then
     echo "---> Starting the MUNGE Authentication service (munged) ..."
@@ -49,6 +57,7 @@ then
     exec gosu slurm /usr/sbin/slurmctld -Dvvv
 fi
 
+## slurmd Entrypoint ##
 if [ "$1" = "slurmd" ]
 then
     echo "---> Starting the MUNGE Authentication service (munged) ..."
