@@ -16,27 +16,31 @@
       state: present
     become: yes
 
-  - name: Create Slurm Config Maps
-    k8s:
-      state: present
-      definition: 
-        apiVersion: v1
-        kind: ConfigMap         
-        metadata:
-          name: slurm-config
-          namespace: "{{ slurm.kubernetes.namespace }}"   
-        data:
-          slurm.conf: |
-            "{{ lookup('template', 'templates/slurm.conf.j2') | indent }}"
-          slurmdbd.conf: |
-            "{{ lookup('template', 'templates/slurmdbd.conf.j2') | indent }}"
-      validate:
-        fail_on_error: yes
+  - name: Create Tempfile for Kube Manifest
+    tempfile:
+      state: file
+      suffix: temp
+    register: temp_kube_manifest
+
+    #notify: Cleanup Tempfile
+
+  - name: Generate the Manifest from Template
+    template:
+      src: templates/kubernetes.yml.j2
+      dest: "{{ temp_kube_manifest.path }}"
 
   - name: Apply Deployment
-    k8s:
-      state: present
-      namespace: "{{ slurm.kubernetes.namespace}}"
-      definition: "{{ lookup('template', 'templates/kubernetes.yml.j2') }}"
-      validate:
-        fail_on_error: yes
+    shell: |
+      kubectl apply -n "{{ slurm.kubernetes.namespace }}" -f "{{ temp_kube_manifest.path }}"
+    register: kubectl_out
+
+  - name: Print Kubectl Apply Output
+    debug:
+      var: kubectl_out.stdout
+    
+  handlers:
+  - name: Cleanup Tempfile
+    file:
+      state: absent
+      path: "{{ temp_kube_manifest }}"
+    when: temp_kube_manifest.path is defined

@@ -25,6 +25,7 @@ slurm:
     namespace: slurm-db
     mysql_image: docker.io/mysql:8.0.29
     slurm_image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
+    cleanup_temp_manifest: true
   cluster_name: linux
   database:
     name: slurm_acct_db

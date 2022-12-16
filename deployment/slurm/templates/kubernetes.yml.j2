@@ -11,6 +11,17 @@ stringData:
 type: Opaque
 
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slurm-config
+data:
+  slurm.conf: |
+    {{ lookup('template', 'templates/slurm.conf.j2') | indent }}
+  slurmdbd.conf: |
+    {{ lookup('template', 'templates/slurmdbd.conf.j2') | indent }}
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -25,6 +36,8 @@ spec:
     metadata:
       labels:
         app: mysql
+      annotations:
+        ansible.config.update/date: {{ template_run_date }}
     spec:
       terminationGracePeriodSeconds: 10
       nodeSelector:
@@ -118,12 +131,14 @@ spec:
     metadata:
       labels:
         app: slurmdbd
+      annotations:
+        ansible.config.update/date: {{ template_run_date }}
     spec:
       hostname: slurmdbd
       containers:
         # slurmdbd
         - name: slurmdbd
-          image: {{ slurm.kubernetes.mysql_image }}
+          image: {{ slurm.kubernetes.slurm_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -194,6 +209,8 @@ spec:
     metadata:
       labels:
         app: slurmctld
+      annotations:
+        ansible.config.update/date: {{ template_run_date }}
     spec:
       hostname: slurmctld
       # Host Records for Nodes
@@ -204,7 +221,7 @@ spec:
       containers:
       #  slurmctld
         - name: slurmctld
-          image: {{ slurm.kubernetes.mysql_image }}
+          image: {{ slurm.kubernetes.slurm_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -317,12 +334,14 @@ spec:
     metadata:
       labels:
         app: slurmd
+      annotations:
+        ansible.config.update/date: {{ template_run_date }}
     spec:
       hostname: slurmd
       containers:
       #  slurmd
         - name: slurmd
-          image: {{ slurm.kubernetes.mysql_image }}
+          image: {{ slurm.kubernetes.slurm_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
