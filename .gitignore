@@ -3,3 +3,4 @@ log
 kslurmWrappers
 munge.key
 inventory
+*.env

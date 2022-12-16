@@ -20,3 +20,14 @@ force_install: false
 hosts_file_entries:
   - "10.227.209.203 slurmctld"
   - "10.227.209.202 slurmdbd"
+slurm:
+  kubernetes:
+    namespace: slurm-db
+    mysql_image: docker.io/mysql:8.0.29
+    slurm_image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
+  cluster_name: linux
+  database:
+    name: slurm_acct_db
+    user: slurm
+    password: 9dd1d5c19c293f0c417d6fb8
+    root_password: Intel01!@#$

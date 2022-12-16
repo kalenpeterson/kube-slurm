@@ -1,0 +1,42 @@
+---
+- name: Deploy Slurm Controller to Kubernetes
+  hosts: provision
+  gather_facts: no
+    
+  tasks:
+  - name: Install Yum Dependencies
+    yum:
+      state: present
+      name: python2-openshift
+    become: yes
+
+  - name: Install Pip Dependencies
+    pip:
+      name: kubernetes-validate
+      state: present
+    become: yes
+
+  - name: Create Slurm Config Maps
+    k8s:
+      state: present
+      definition: 
+        apiVersion: v1
+        kind: ConfigMap         
+        metadata:
+          name: slurm-config
+          namespace: "{{ slurm.kubernetes.namespace }}"   
+        data:
+          slurm.conf: |
+            "{{ lookup('template', 'templates/slurm.conf.j2') | indent }}"
+          slurmdbd.conf: |
+            "{{ lookup('template', 'templates/slurmdbd.conf.j2') | indent }}"
+      validate:
+        fail_on_error: yes
+
+  - name: Apply Deployment
+    k8s:
+      state: present
+      namespace: "{{ slurm.kubernetes.namespace}}"
+      definition: "{{ lookup('template', 'templates/kubernetes.yml.j2') }}"
+      validate:
+        fail_on_error: yes

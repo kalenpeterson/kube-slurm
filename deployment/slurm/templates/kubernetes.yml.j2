@@ -1,160 +1,106 @@
 ---
+kind: Secret
 apiVersion: v1
-kind: ConfigMap
 metadata:
-  creationTimestamp: 2016-02-18T18:52:05Z
-  name: slurm-config
-data:
-  slurm.conf: |
-    # slurm.conf
-    #
-    # See the slurm.conf man page for more information.
-    #
-    ClusterName=linux
-    ControlMachine=slurmctld
-    ControlAddr=slurmctld
-    #BackupController=
-    #BackupAddr=
-    #
-    SlurmUser=slurm
-    #SlurmdUser=root
-    SlurmctldPort=6817
-    SlurmdPort=6818
-    AuthType=auth/munge
-    #JobCredentialPrivateKey=
-    #JobCredentialPublicCertificate=
-    StateSaveLocation=/var/lib/slurmd
-    SlurmdSpoolDir=/var/spool/slurmd
-    SwitchType=switch/none
-    MpiDefault=none
-    SlurmctldPidFile=/var/run/slurmd/slurmctld.pid
-    SlurmdPidFile=/var/run/slurmd/slurmd.pid
-    ProctrackType=proctrack/linuxproc
-    #PluginDir=
-    #CacheGroups=0
-    #FirstJobId=
-    ReturnToService=0
-    #MaxJobCount=
-    #PlugStackConfig=
-    #PropagatePrioProcess=
-    #PropagateResourceLimits=
-    #PropagateResourceLimitsExcept=
-    #Prolog=
-    #Epilog=
-    #SrunProlog=
-    #SrunEpilog=
-    #TaskProlog=
-    #TaskEpilog=
-    #TaskPlugin=
-    #TrackWCKey=no
-    #TreeWidth=50
-    #TmpFS=
-    #UsePAM=
-    #
-    # TIMERS
-    SlurmctldTimeout=300
-    SlurmdTimeout=300
-    InactiveLimit=0
-    MinJobAge=300
-    KillWait=30
-    Waittime=0
-    #
-    # SCHEDULING
-    SchedulerType=sched/backfill
-    #SchedulerAuth=
-    #SchedulerPort=
-    #SchedulerRootFilter=
-    SelectType=select/cons_res
-    SelectTypeParameters=CR_CPU_Memory
-    FastSchedule=1
-    #PriorityType=priority/multifactor
-    #PriorityDecayHalfLife=14-0
-    #PriorityUsageResetPeriod=14-0
-    #PriorityWeightFairshare=100000
-    #PriorityWeightAge=1000
-    #PriorityWeightPartition=10000
-    #PriorityWeightJobSize=1000
-    #PriorityMaxAge=1-0
-    #
-    # LOGGING
-    SlurmctldDebug=3
-    SlurmctldLogFile=/var/log/slurm/slurmctld.log
-    SlurmdDebug=3
-    SlurmdLogFile=/var/log/slurm/slurmd.log
-    JobCompType=jobcomp/filetxt
-    JobCompLoc=/var/log/slurm/jobcomp.log
-    #
-    # ACCOUNTING
-    JobAcctGatherType=jobacct_gather/linux
-    JobAcctGatherFrequency=30
-    #
-    AccountingStorageType=accounting_storage/slurmdbd
-    AccountingStorageHost=slurmdbd
-    AccountingStoragePort=6819
-    #AccountingStorageLoc=slurm_acct_db
-    #AccountingStoragePass=
-    #AccountingStorageUser=
-    #
-    # COMPUTE NODES
-    #GresTypes=gpu
-    NodeName=nvidia-node01  NodeAddr=10.227.209.181 RealMemory=7976 State=UNKNOWN
-    NodeName=nvidia-node02  NodeAddr=10.227.209.182 RealMemory=7976 State=UNKNOWN
-    NodeName=slurmd RealMemory=1000 State=UNKNOWN
-    #
-    # PARTITIONS
-    PartitionName=Test Default=yes Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
+  name: mysql
+stringData:
+  database-name: '{{ slurm.database.name }}'
+  database-password: '{{ slurm.database.password }}'
+  database-root-password: '{{ slurm.database.root_password }}'
+  database-user: '{{ slurm.database.user }}'
+type: Opaque
 
-    PartitionName=Basic Nodes=ALL MaxTime=00:10:00 DefaultTime=00:10:00 State=UP OverSubscribe=NO
-    PartitionName=Short Nodes=ALL MaxTime=01:00:00 DefaultTime=01:00:00 State=UP OverSubscribe=NO
-    PartitionName=Medium Nodes=ALL MaxTime=04:00:00 DefaultTime=04:00:00 State=UP OverSubscribe=NO
-    PartitionName=Long Nodes=ALL MaxTime=10:00:00 DefaultTime=10:00:00 State=UP OverSubscribe=NO
-    PartitionName=Mammoth Nodes=ALL MaxTime=14-00:00:00 DefaultTime=14-00:00:00 State=UP OverSubscribe=NO
-
-    # Set Srun Portrange
-    SrunPortRange=60001-60010
-
-    # Disable config hash check
-    DebugFlags=NO_CONF_HASH
-
-
-  slurmdbd.conf: |
-    #
-    # Example slurmdbd.conf file.
-    #
-    # See the slurmdbd.conf man page for more information.
-    #
-    # Archive info
-    #ArchiveJobs=yes
-    #ArchiveDir="/tmp"
-    #ArchiveSteps=yes
-    #ArchiveScript=
-    #JobPurge=12
-    #StepPurge=1
-    #
-    # Authentication info
-    AuthType=auth/munge
-    #AuthInfo=/var/run/munge/munge.socket.2
-    #
-    # slurmDBD info
-    DbdAddr=slurmdbd
-    DbdHost=slurmdbd
-    #DbdPort=6819
-    SlurmUser=slurm
-    #MessageTimeout=300
-    DebugLevel=4
-    #DefaultQOS=normal,standby
-    LogFile=/var/log/slurm/slurmdbd.log
-    PidFile=/var/run/slurmdbd/slurmdbd.pid
-    #PluginDir=/usr/lib/slurm
-    #PrivateData=accounts,users,usage,jobs
-    #TrackWCKey=yes
-    #
-    # Database info
-    StorageType=accounting_storage/mysql
-    StorageHost=mysql
-    StorageUser=slurm
-    StoragePass=9dd1d5c19c293f0c417d6fb8
-    StorageLoc=slurm_acct_db
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  serviceName: mysql
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      containers:
+        - name: mysql
+          image: {{ slurm.kubernetes.mysql_image }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - '-i'
+                - '-c'
+                - MYSQL_PWD="$MYSQL_PASSWORD" mysqladmin -u $MYSQL_USER ping
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - '-i'
+                - '-c'
+                - MYSQL_PWD="$MYSQL_PASSWORD" mysqladmin -u $MYSQL_USER ping
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: database-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: database-password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: database-root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: database-name
+          resources: {}
+            # requests:
+            #   memory: "4Gi"
+            #   cpu: "1000m"
+            # limits:
+            #   memory: "6Gi"
+            #   cpu: "2000m"
+          ports:
+            - name: mysql
+              protocol: TCP
+              containerPort: 3306
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        storageClassName: panfs
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
 
 ---
 apiVersion: apps/v1
@@ -177,7 +123,7 @@ spec:
       containers:
         # slurmdbd
         - name: slurmdbd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
+          image: {{ slurm.kubernetes.mysql_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -258,7 +204,7 @@ spec:
       containers:
       #  slurmctld
         - name: slurmctld
-          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
+          image: {{ slurm.kubernetes.mysql_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -376,7 +322,7 @@ spec:
       containers:
       #  slurmd
         - name: slurmd
-          image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
+          image: {{ slurm.kubernetes.mysql_image }}
           imagePullPolicy: IfNotPresent
           command: ["/usr/local/bin/docker-entrypoint.sh"]
           args:
@@ -488,6 +434,39 @@ spec:
   resources:
     requests:
       storage: 50Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql
+  ports:
+    - name: mysql
+      protocol: TCP
+      port: 3306
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-external
+  annotations:
+    metallb.universe.tf/address-pool: internal-mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+      name: mysql
+  type: LoadBalancer
 
 ---
 apiVersion: v1

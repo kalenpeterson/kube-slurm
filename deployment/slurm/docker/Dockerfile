@@ -6,10 +6,10 @@ LABEL org.opencontainers.image.source="https://github.com/kalenpeterson/kube-slu
 
 ARG SLURM_VERSION=20.11.9
 ARG GOSU_VERSION=1.11
-ARG MUNGE_UID=993
-ARG MUNGE_GID=989
-ARG SLURM_UID=22078
-ARG SLURM_GID=988
+ARG MUNGE_UID
+ARG MUNGE_GID
+ARG SLURM_UID
+ARG SLURM_GID
 
 # Setup Users and Groups
 RUN groupadd -g $MUNGE_GID munge && \
