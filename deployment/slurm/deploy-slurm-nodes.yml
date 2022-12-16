@@ -159,8 +159,8 @@
           force_install == true
 
   - name: Copy Slurm.conf
-    copy:
-      src: files/slurm.conf
+    template:
+      src: templates/slurm.conf.j2
       dest: /etc/slurm/slurm.conf
       owner: slurm
       group: slurm

@@ -4,25 +4,12 @@
   gather_facts: no
     
   tasks:
-  - name: Install Yum Dependencies
-    yum:
-      state: present
-      name: python2-openshift
-    become: yes
-
-  - name: Install Pip Dependencies
-    pip:
-      name: kubernetes-validate
-      state: present
-    become: yes
-
   - name: Create Tempfile for Kube Manifest
     tempfile:
       state: file
       suffix: temp
     register: temp_kube_manifest
-
-    #notify: Cleanup Tempfile
+    notify: Cleanup Tempfile
 
   - name: Generate the Manifest from Template
     template:
@@ -43,4 +30,5 @@
     file:
       state: absent
       path: "{{ temp_kube_manifest }}"
-    when: temp_kube_manifest.path is defined
+    when: temp_kube_manifest.path is defined and
+          slurm.kubernetes.cleanup_temp_manifest is true
