@@ -321,6 +321,12 @@ spec:
               name: var-spool-slurmd
             - mountPath: /nas
               name: nas
+            - mountPath: /etc/passwd
+              name: etc
+              subPath: passwd
+            - mountPath: /etc/group
+              name: etc
+              subPath: group
       volumes:
         - name: slurm-config
           configMap:
@@ -339,6 +345,9 @@ spec:
           hostPath:
             path: /nas
             type: Directory
+        - name: etc
+          hostPath:
+            path: /etc
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
@@ -401,6 +410,12 @@ spec:
               name: var-log-slurm
             - mountPath: /nas
               name: nas
+            - mountPath: /etc/passwd
+              name: etc
+              subPath: passwd
+            - mountPath: /etc/group
+              name: etc
+              subPath: group
       volumes:
         - name: slurm-config
           configMap:
@@ -419,6 +434,9 @@ spec:
           hostPath:
             path: /nas
             type: Directory
+        - name: etc
+          hostPath:
+            path: /etc
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
