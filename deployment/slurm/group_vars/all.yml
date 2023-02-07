@@ -25,8 +25,10 @@ slurm:
     namespace: slurm-db
     mysql_image: docker.io/mysql:8.0.29
     slurm_image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
-    cleanup_temp_manifest: true
+    cleanup_temp_manifest: False
   cluster_name: linux
+  srun_port_range_start: 60001
+  srun_port_range_end: 60010
   database:
     name: slurm_acct_db
     user: slurm

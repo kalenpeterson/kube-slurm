@@ -1,0 +1,34 @@
+---
+- name: Remove Slurm Control Plan from Kubernetes
+  hosts: provision
+  gather_facts: no
+    
+  tasks:
+  - name: Create Tempfile for Kube Manifest
+    tempfile:
+      state: file
+      suffix: temp
+    register: temp_kube_manifest
+    notify: Cleanup Tempfile
+
+  - name: Generate the Manifest from Template
+    template:
+      src: templates/kubernetes.yml.j2
+      dest: "{{ temp_kube_manifest.path }}"
+
+  - name: Delete Resources
+    shell: |
+      kubectl delete -n "{{ slurm.kubernetes.namespace }}" -f "{{ temp_kube_manifest.path }}"
+    register: kubectl_out
+
+  - name: Print Kubectl Apply Output
+    debug:
+      var: kubectl_out.stdout
+    
+  handlers:
+  - name: Cleanup Tempfile
+    file:
+      state: absent
+      path: "{{ temp_kube_manifest }}"
+    when: temp_kube_manifest.path is defined and
+          slurm.kubernetes.cleanup_temp_manifest is true

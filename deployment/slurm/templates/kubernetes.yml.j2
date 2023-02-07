@@ -215,9 +215,11 @@ spec:
       hostname: slurmctld
       # Host Records for Nodes
       hostAliases:
-        - ip: "10.227.209.181"
+{% for host in groups['all'] %}
+        - ip: "{{ hostvars[host]['ansible_host'] }}"
           hostnames:
-            - "nvidia-node01"
+            - "{{ hostvars[host]['inventory_hostname'] }}"
+{% endfor %}
       containers:
       #  slurmctld
         - name: slurmctld
@@ -233,26 +235,10 @@ spec:
             - name: slurmctld
               protocol: TCP
               containerPort: 6817
+{% for port in range(slurm.srun_port_range_start, slurm.srun_port_range_end) %}
             - protocol: TCP
-              containerPort: 60001
-            - protocol: TCP
-              containerPort: 60002
-            - protocol: TCP
-              containerPort: 60003
-            - protocol: TCP
-              containerPort: 60004
-            - protocol: TCP
-              containerPort: 60005
-            - protocol: TCP
-              containerPort: 60006
-            - protocol: TCP
-              containerPort: 60007
-            - protocol: TCP
-              containerPort: 60008
-            - protocol: TCP
-              containerPort: 60009
-            - protocol: TCP
-              containerPort: 60010
+              containerPort: {{ port }}
+{% endfor %}
           livenessProbe:
             failureThreshold: 3
             tcpSocket:
@@ -519,46 +505,12 @@ spec:
       port: 6817
       targetPort: 6817
       name: slurmctld
+{% for port in range(slurm.srun_port_range_start, slurm.srun_port_range_end) %}
     - protocol: TCP
-      port: 60001
-      targetPort: 60001
-      name: srun-60001
-    - protocol: TCP
-      port: 60002
-      targetPort: 60002
-      name: srun-60002
-    - protocol: TCP
-      port: 60003
-      targetPort: 60003
-      name: srun-60003
-    - protocol: TCP
-      port: 60004
-      targetPort: 60004
-      name: srun-600014
-    - protocol: TCP
-      port: 60005
-      targetPort: 60005
-      name: srun-60005
-    - protocol: TCP
-      port: 60006
-      targetPort: 60006
-      name: srun-60006
-    - protocol: TCP
-      port: 60007
-      targetPort: 60007
-      name: srun-60007
-    - protocol: TCP
-      port: 60008
-      targetPort: 60008
-      name: srun-60008
-    - protocol: TCP
-      port: 60009
-      targetPort: 60009
-      name: srun-60009
-    - protocol: TCP
-      port: 60010
-      targetPort: 60010
-      name: srun-60010
+      port: {{ port }}
+      targetPort: {{ port }}
+      name: srun-{{ port }}
+{% endfor %}
   type: LoadBalancer
 
 ---
@@ -589,46 +541,12 @@ spec:
       port: 6817
       targetPort: 6817
       name: slurmctld
+{% for port in range(slurm.srun_port_range_start, slurm.srun_port_range_end) %}
     - protocol: TCP
-      port: 60001
-      targetPort: 60001
-      name: srun-60001
-    - protocol: TCP
-      port: 60002
-      targetPort: 60002
-      name: srun-60002
-    - protocol: TCP
-      port: 60003
-      targetPort: 60003
-      name: srun-60003
-    - protocol: TCP
-      port: 60004
-      targetPort: 60004
-      name: srun-600014
-    - protocol: TCP
-      port: 60005
-      targetPort: 60005
-      name: srun-60005
-    - protocol: TCP
-      port: 60006
-      targetPort: 60006
-      name: srun-60006
-    - protocol: TCP
-      port: 60007
-      targetPort: 60007
-      name: srun-60007
-    - protocol: TCP
-      port: 60008
-      targetPort: 60008
-      name: srun-60008
-    - protocol: TCP
-      port: 60009
-      targetPort: 60009
-      name: srun-60009
-    - protocol: TCP
-      port: 60010
-      targetPort: 60010
-      name: srun-60010
+      port: {{ port }}
+      targetPort: {{ port }}
+      name: srun-{{ port }}
+{% endfor %}
   type: ClusterIP
 
 ---
