@@ -312,7 +312,7 @@ metadata:
   labels:
     app: slurmd
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: slurmd
@@ -381,12 +381,6 @@ spec:
         - name: var-log-slurm
           persistentVolumeClaim:
             claimName: var-log-slurm
-        # - name: var-lib-slurmd
-        #   persistentVolumeClaim:
-        #     claimName: var-lib-slurmd
-        # - name: var-spool-slurmd
-        #   persistentVolumeClaim:
-        #     claimName: var-spool-slurmd
         - name: nas
           hostPath:
             path: /nas
