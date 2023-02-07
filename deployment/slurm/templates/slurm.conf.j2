@@ -103,7 +103,7 @@ PartitionName=Long Nodes=ALL MaxTime=10:00:00 DefaultTime=10:00:00 State=UP Over
 PartitionName=Mammoth Nodes=ALL MaxTime=14-00:00:00 DefaultTime=14-00:00:00 State=UP OverSubscribe=NO
 
 # Set Srun Portrange
-SrunPortRange=60001-60010
+SrunPortRange={{ slurm.srun_port_range_start }}-{{ slurm.srun_port_range_end }}
 
 # Disable config hash check
 DebugFlags=NO_CONF_HASH
