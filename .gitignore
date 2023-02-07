@@ -4,3 +4,4 @@ kslurmWrappers
 munge.key
 inventory
 *.env
+all.yml
