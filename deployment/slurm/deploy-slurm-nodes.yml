@@ -176,6 +176,16 @@
       mode: '0644'
     notify: Reload Slurmd
 
+  - name: Copy gres.conf
+    copy:
+      src: files/lmd.gres.conf
+      dest: /etc/slurm/gres.conf
+      owner: slurm
+      group: slurm
+      mode: '0644'
+    notify: Reload Slurmd
+    when: "'lambda' in group_names"
+
   - name: Setup Hosts
     lineinfile:
       path: /etc/hosts
