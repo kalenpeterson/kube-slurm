@@ -72,6 +72,15 @@
       mode: '0400'
     notify: Restart Munge
 
+  - name: Install Kubectl
+    copy:
+      src: /usr/local/bin/kubectl
+      dest: /usr/local/bin/kubectl
+      owner: root
+      group: root
+      mode: '0755'
+    when: "'node' in group_names"
+
   handlers:
   - name: Restart Munge
     service:
