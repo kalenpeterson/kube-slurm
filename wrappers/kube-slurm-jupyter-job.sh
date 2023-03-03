@@ -1,6 +1,6 @@
 #!/bin/bash
 ## Manage Jupyter Job Pods from Slurm
-source ../config/settings.sh
+#source ../config/settings.sh
 
 # Print Slurm ENV Vars
 echo
@@ -20,15 +20,17 @@ KUBE_JOB_USER=$(id -un)
 KUBE_JOB_GROUP=$(id -gn)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
-KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT}
-KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL}
-KUBE_NAMESPACE=${KUBE_NAMESPACE}
-KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS}
+KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT:=600}
+KUBE_POD_MONITOR_INTERVAL=${KUBE_POD_MONITOR_INTERVAL:=10}
+KUBE_NAMESPACE=${KUBE_NAMESPACE:=slurm}
+KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS:=nvidia-pod}
 KUBE_INGRESS_PREFIX="/jupyter"
+KUBE_TARGET_PORT=${KUBE_TARGET_PORT:=8888}
 USER_HOME=${HOME}
+KUBE_DATA_VOLUME=${KUBE_DATA_VOLUME}
 
 # Setup Kubeconfig
-export KUBECONFIG=${KUBECONFIG}
+export KUBECONFIG=${KUBECONFIG:=~/.kube/config}
 
 # Print Kube ENV Vars
 echo
@@ -37,7 +39,7 @@ echo "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
 echo "KUBE_JOB_UID: ${KUBE_JOB_UID}"
 echo "KUBE_JOB_GID: ${KUBE_JOB_GID}"
 echo "KUBE_IMAGE: ${KUBE_IMAGE}"
-echo "KUBE_WORK_VOLUME: ${KUBE_WORK_VOLUME}"
+echo "KUBE_DATA_VOLUME: ${KUBE_DATA_VOLUME}"
 echo "KUBE_TARGET_PORT: ${KUBE_TARGET_PORT}"
 echo "KUBE_NODE: ${KUBE_NODE}"
 echo "KUBE_GPU_COUNT: ${KUBE_GPU_COUNT}"
@@ -46,7 +48,9 @@ echo "KUBE_POD_MONITOR_INTERVAL: ${KUBE_POD_MONITOR_INTERVAL}"
 echo "KUBE_NAMESPACE: ${KUBE_NAMESPACE}"
 echo "KUBE_CLUSTER_DNS: ${KUBE_CLUSTER_DNS}"
 echo "KUBE_INGRESS_PREFIX: ${KUBE_INGRESS_PREFIX}"
+echo "KUBE_TARGET_PORT: ${KUBE_TARGET_PORT}"
 echo "User Home: ${USER_HOME}"
+
 
 ## Manage Logging
 function log () {
@@ -65,6 +69,25 @@ function cleanup () {
 trap cleanup EXIT # Normal Exit
 trap cleanup SIGTERM # Termination from SLurm
 
+# Collect the Pod Error
+function get_pod_error () {
+  NAMESPACE=$1
+  POD=$2
+  log "Collecting POD Events..."
+  kubectl describe pod -n ${NAMESPACE} ${POD} |grep -A20 Events
+  log "Collecting POD Logs"
+  kubectl logs -n ${NAMESPACE} ${POD}
+}
+
+## Check Data Volume and get it's GID
+log "Checking GID of KUBE_JUPYTER_WORK_VOLUME"
+KUBE_JOB_FSGID=$(getfacl -nat "${KUBE_JUPYTER_WORK_VOLUME}" 2>/dev/null |grep ^GROUP |awk '{print $2}')
+echo "KUBE_JOB_FSGID: ${KUBE_JOB_FSGID}"
+if [[ "${KUBE_JOB_FSGID}" == "" || "${KUBE_JUPYTER_WORK_VOLUME}" == "0" ]]; then
+  log "ERROR: Failed to get GID of KUBE_JUPYTER_WORK_VOLUME OR GID was 0"
+  exit 1
+fi
+
 ## Ensure Namespace Exists
 log "Setting up Namespace"
 kubectl get namespace ${KUBE_NAMESPACE} 2>/dev/null || kubectl create namespace ${KUBE_NAMESPACE}
@@ -80,7 +103,7 @@ metadata:
   labels:
     app: ${KUBE_JOB_NAME}
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
   - name: ${KUBE_JOB_NAME}
     port: ${KUBE_TARGET_PORT}
@@ -114,9 +137,7 @@ spec:
 EOF
 
 ## Generate Notebook URL (Ingress)
-#NODE_PORT=$(kubectl describe service ${KUBE_JOB_NAME} -n ${KUBE_NAMESPACE} |grep NodePort: |awk '{print $3}' |awk -F/ '{print $1}')
 JUPYTER_URL="https://${KUBE_CLUSTER_DNS}${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}?token=${JUPYTER_TOKEN}"
-#JUPYTER_URL="http://${KUBE_CLUSTER_DNS}:${NODE_PORT}/?token=${JUPYTER_TOKEN}"
 echo "########################################################"
 echo "Your Jupyter Notebook URL will be: ${JUPYTER_URL}"
 echo "########################################################"
@@ -141,27 +162,15 @@ metadata:
     app: ${KUBE_JOB_NAME}
 spec:
   volumes:
-  - name: apps
-    hostPath:
-      type: Directory
-      path: /apps
-  - name: data
-    hostPath:
-      type: Directory
-      path: /data
   - name: workspace
     hostPath:
       type: Directory
-      path: ${USER_HOME}
+      path: "${KUBE_JUPYTER_WORK_VOLUME}"
   restartPolicy: Never
   containers:
   - name: ${KUBE_JOB_NAME}
     image: ${KUBE_IMAGE}
     volumeMounts:
-    - name: apps
-      mountPath: /apps
-    - name: data
-      mountPath: /data
     - name: workspace
       mountPath: /workspace
     env:
@@ -187,12 +196,20 @@ spec:
 EOF
 
 
-## Wait for Container to be Ready
-log "Waiting ${KUBE_INIT_TIMEOUT} seconds for Container to be Ready"
-kubectl wait --for=condition=ContainersReady --timeout=${KUBE_INIT_TIMEOUT}s -n ${KUBE_NAMESPACE} pods ${KUBE_JOB_NAME} || exit 2
+## Wait for Pod to Initialize
+log "Waiting ${KUBE_INIT_TIMEOUT} seconds for Pod to Initialize"
+kubectl wait --for=condition=ready --timeout=${KUBE_INIT_TIMEOUT}s -n ${KUBE_NAMESPACE} pods ${KUBE_JOB_NAME}
+RC=$?
+
+## Check if Pod Started
+if [[ $RC -ne 0 ]]; then
+  log "Pod initilization failed or timed out, see following for troubleshooting"
+  get_pod_error ${KUBE_NAMESPACE} ${KUBE_JOB_NAME}
+  exit 2
+fi
 
 ## Monitor Pod status and print logs
-log "Container Ready, following logs (updates every ${KUBE_POD_MONITOR_INTERVAL}s)"
+log "Pod Initialized, following logs (updates every ${KUBE_POD_MONITOR_INTERVAL}s)"
 while ${WATCH_POD}
 do
 
