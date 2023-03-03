@@ -10,7 +10,10 @@ export SLURM_NODEID=99
 export SLURMD_NODENAME=nvidia-mgmt01
 
 # Set Docker Image
-export KUBE_IMAGE=registry.local:31500/slurm-tensorflow:latest
+export KUBE_IMAGE=docker.io/kalenpeterson/slurm-tensorflow:v1.0
+
+# Set the Data Volume
+export KUBE_JUPYTER_WORK_VOLUME=/home/dgx
 
 # Invoke the Job
 ../wrappers/kube-slurm-jupyter-job.sh
