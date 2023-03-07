@@ -93,7 +93,7 @@ log "Setting up Namespace"
 kubectl get namespace ${KUBE_NAMESPACE} 2>/dev/null || kubectl create namespace ${KUBE_NAMESPACE}
 
 ## Create Service
-log "Creating Notebook NodePort Service"
+log "Creating Notebook ClusterIP Service"
 cat <<EOF | kubectl create -n ${KUBE_NAMESPACE} -f -
 ---
 apiVersion: v1
@@ -184,7 +184,7 @@ spec:
     args:
       - "-c"
       #- "sleep infinity"
-      - "jupyter lab  --notebook-dir=/work --ip=0.0.0.0 --no-browser --port=8888 --NotebookApp.token=${JUPYTER_TOKEN} --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}"
+      - "jupyter lab  --notebook-dir=/work --ip=0.0.0.0 --no-browser --port=${KUBE_TARGET_PORT} --NotebookApp.token=${JUPYTER_TOKEN} --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${KUBE_INGRESS_PREFIX}/${KUBE_JOB_NAME}"
     volumeMounts:
     - name: data
       mountPath: /work/data
