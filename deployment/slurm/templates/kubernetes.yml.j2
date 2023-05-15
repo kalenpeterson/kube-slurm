@@ -241,12 +241,13 @@ spec:
 {% endfor %}
           livenessProbe:
             failureThreshold: 3
-            tcpSocket:
-              port: 6817
-            periodSeconds: 10
+            exec:
+              command:
+                - sinfo
+            periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 1
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
           readinessProbe:
             failureThreshold: 3
             tcpSocket:

@@ -165,7 +165,7 @@
           chdir: "/tmp/{{ slurm_version }}"
         notify: Reload Slurmd
     when: slurm_version != installed_slurm_version or
-          force_install == true
+          force_install|bool  == true
 
   - name: Copy Slurm.conf
     template:
