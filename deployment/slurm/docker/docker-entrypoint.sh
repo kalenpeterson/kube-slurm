@@ -29,7 +29,7 @@ then
     }
     echo "-- Database is now active ..."
 
-    exec gosu slurm /usr/sbin/slurmdbd -Dvvv
+    exec gosu slurm /usr/sbin/slurmdbd -Dv
 fi
 
 ## slurmdctld Entrypoint ##
@@ -47,14 +47,21 @@ then
     done
     echo "-- slurmdbd is now active ..."
 
-    echo "---> Starting the Slurm Controller Daemon (slurmctld) ..."
+    
+    echo "---> Injecting Slurm Config ..."
     cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
     cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
     chown -R slurm /etc/slurm/*.conf
     chown -R slurm /var/log/slurm*
     chown -R slurm /var/lib/slurm*
     chown -R slurm /var/spool/slurm*
-    exec gosu slurm /usr/sbin/slurmctld -Dvvv
+
+    echo "---> Injecting host files..."
+    cp /hostpath/etc/passwd /etc/passwd || exit 51
+    cp /hostpath/etc/group /etc/group || exit 52
+
+    echo "---> Starting the Slurm Controller Daemon (slurmctld) ..."
+    exec gosu slurm /usr/sbin/slurmctld -Dv
 fi
 
 ## slurmd Entrypoint ##
@@ -75,7 +82,7 @@ then
     echo "---> Starting the Slurm Node Daemon (slurmd) ..."
     cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
     cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
-    exec /usr/sbin/slurmd -Dvvv
+    exec /usr/sbin/slurmd -Dv
 fi
 
 exec "$@"

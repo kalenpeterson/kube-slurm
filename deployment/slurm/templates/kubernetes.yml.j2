@@ -271,12 +271,8 @@ spec:
               name: var-spool-slurmd
             - mountPath: /nas
               name: nas
-            - mountPath: /etc/passwd
+            - mountPath: /hostpath/etc
               name: etc
-              subPath: passwd
-            - mountPath: /etc/group
-              name: etc
-              subPath: group
             - mountPath: /etc/munge/munge.key
               name: etc
               subPath: munge/munge.key
@@ -301,6 +297,58 @@ spec:
         - name: etc
           hostPath:
             path: /etc
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slurm-logrotate
+  labels:
+    app: slurm-logrotate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slurm-logrotate
+  template:
+    metadata:
+      labels:
+        app: slurm-logrotate
+      annotations:
+        ansible.config.update/date: {{ template_run_date }}
+    spec:
+      containers:
+        - name: logrotate
+          image: docker.io/linkyard/logrotate:1.0.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/pgrep
+              - crond
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          env:
+            - name: LOGROTATE_FILE_PATTERN
+              value: "*.log"
+            - name: LOGROTATE_TRUNCATE
+              value: "copytruncate"
+            - name: LOGROTATE_COMPRESS
+              value: "nocompress"
+            - name: LOGROTATE_ROTATE
+              value: "5"
+            - name: LOGROTATE_SIZE
+              value: "100M"
+          volumeMounts:
+            - mountPath: /logs
+              name: var-log-slurm
+      volumes:
+        - name: var-log-slurm
+          persistentVolumeClaim:
+            claimName: var-log-slurm
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
