@@ -1,0 +1,184 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mofed-test-0
+  namespace: multinode-test
+spec:
+  type: ClusterIP
+  ports:
+    - name: ssh
+      protocol: TCP
+      port: 22
+      targetPort: 22
+  selector:
+    app: mofed-test-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mofed-test-1
+  namespace: multinode-test
+spec:
+  type: ClusterIP
+  ports:
+    - name: ssh
+      protocol: TCP
+      port: 22
+      targetPort: 22
+  selector:
+    app: mofed-test-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mofed-test-2
+  namespace: multinode-test
+spec:
+  type: ClusterIP
+  ports:
+    - name: ssh
+      protocol: TCP
+      port: 22
+      targetPort: 22
+  selector:
+    app: mofed-test-2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mofed-test-3
+  namespace: multinode-test
+spec:
+  type: ClusterIP
+  ports:
+    - name: ssh
+      protocol: TCP
+      port: 22
+      targetPort: 22
+  selector:
+    app: mofed-test-3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mofed-test-0
+  namespace: multinode-test
+  labels:
+    app: mofed-test-0
+spec:
+  restartPolicy: OnFailure
+  nodeSelector:
+    kubernetes.io/hostname: lmd-4
+  containers:
+    - image: erisxdl.partners.org/library/lambda-openmpi:20230706-v7
+      ports:
+        - containerPort: 22
+          protocol: TCP
+      name: mofed-test-ctr
+      securityContext:
+        capabilities:
+          add: ["IPC_LOCK"]
+      resources:
+        limits:
+          rdma/hca_shared_devices_a: 8
+          #rdma/hca_shared_devices_b: 8
+          nvidia.com/gpu: 8
+      #command:
+      #- sh
+      #- -c
+      #- |
+      #  sleep infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mofed-test-1
+  namespace: multinode-test
+  labels:
+    app: mofed-test-1
+spec:
+  restartPolicy: OnFailure
+  nodeSelector:
+    kubernetes.io/hostname: lmd-3
+  containers:
+    - image: erisxdl.partners.org/library/lambda-openmpi:20230706-v7
+      ports:
+        - containerPort: 22
+          protocol: TCP
+      name: mofed-test-ctr
+      securityContext:
+        capabilities:
+          add: ["IPC_LOCK"]
+      resources:
+        limits:
+          rdma/hca_shared_devices_a: 8
+          #rdma/hca_shared_devices_b: 8
+          nvidia.com/gpu: 8
+      #command:
+      #- sh
+      #- -c
+      #- |
+      #  sleep infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mofed-test-2
+  namespace: multinode-test
+  labels:
+    app: mofed-test-2
+spec:
+  restartPolicy: OnFailure
+  nodeSelector:
+    kubernetes.io/hostname: lmd-1
+  containers:
+    - image: erisxdl.partners.org/library/lambda-openmpi:20230706-v7
+      ports:
+        - containerPort: 22
+          protocol: TCP
+      name: mofed-test-ctr
+      securityContext:
+        capabilities:
+          add: ["IPC_LOCK"]
+      resources:
+        limits:
+          rdma/hca_shared_devices_a: 8
+          #rdma/hca_shared_devices_b: 8
+          nvidia.com/gpu: 8
+      #command:
+      #- sh
+      #- -c
+      #- |
+      #  sleep infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mofed-test-3
+  namespace: multinode-test
+  labels:
+    app: mofed-test-3
+spec:
+  restartPolicy: OnFailure
+  nodeSelector:
+    kubernetes.io/hostname: lmd-2
+  containers:
+    - image: erisxdl.partners.org/library/lambda-openmpi:20230706-v7
+      ports:
+        - containerPort: 22
+          protocol: TCP
+      name: mofed-test-ctr
+      securityContext:
+        capabilities:
+          add: ["IPC_LOCK"]
+      resources:
+        limits:
+          rdma/hca_shared_devices_a: 8
+          #rdma/hca_shared_devices_b: 8
+          nvidia.com/gpu: 8
+      #command:
+      #- sh
+      #- -c
+      #- |
+      #  sleep infinity
