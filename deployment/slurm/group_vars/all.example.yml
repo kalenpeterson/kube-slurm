@@ -14,7 +14,7 @@ install_users:
     uid: 22078
     group: slurm
 # Set the Slurm version to install/upgrade to
-slurm_version: 'slurm-20.11.9'
+slurm_version: "slurm-20.11.9"
 # Force slurm to be installed, even if it already is
 force_install: false
 hosts_file_entries:
@@ -34,3 +34,4 @@ slurm:
     user: slurm
     password: 9dd1d5c19c293f0c417d6fb8
     root_password: Intel01!@#$
+  enable_gpu: True

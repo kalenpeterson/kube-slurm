@@ -5,3 +5,4 @@ munge.key
 inventory
 *.env
 all.yml
+merge_compare/
