@@ -17,10 +17,10 @@ export KUBE_INIT_TIMEOUT=300
 export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230720-v10
 
 # Define the Script to run
-export KUBE_SCRIPT=/home/dgx/kube-slurm/tests/run-sleep.sh
+export KUBE_SCRIPT=/nas/slurm/data/run-sleep.sh
 
 # Define working directory to use
-export KUBE_DATA_VOLUME=/nas/volumes/testvolume
+export KUBE_DATA_VOLUME=/nas/slurm/data
 
 # Set Kubeconfig
 export KUBECONFIG=~/.kube/config

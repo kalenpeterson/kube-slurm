@@ -21,6 +21,7 @@ echo "SLURM_GPUS_PER_NODE: ${SLURM_GPUS_PER_NODE}"
 KUBE_JOB_NAME=slurm-job-${SLURM_JOB_ID}
 KUBE_JOB_UID=$(id -u)
 KUBE_JOB_GID=$(id -g)
+JUBE_JOB_USERNAME=$(id -nu)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
 KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT:=600}
@@ -102,12 +103,13 @@ fi
 
 ## Check Data Volume and get it's GID
 log "Checking GID of KUBE_DATA_VOLUME"
-KUBE_JOB_FSGID=$(getfacl -nat "${KUBE_DATA_VOLUME}" 2>/dev/null |grep ^GROUP |awk '{print $2}')
 echo "KUBE_JOB_FSGID: ${KUBE_JOB_FSGID}"
 if [[ "${KUBE_JOB_FSGID}" == "" || "${DATA_VOLUME_GID}" == "0" ]]; then
   log "ERROR: Failed to get GID of KUBE_DATA_VOLUME OR GID was 0"
   exit 1
 fi
+KUBE_JOB_FS_GROUPNAME=$(getent group ${KUBE_JOB_FSGID} | cut -d: -f1)
+echo "KUBE_JOB_FS_GROUPNAME: ${KUBE_JOB_FS_GROUPNAME}"
 
 ## Ensure Namespace Exists
 log "Setting up Namespace"
@@ -227,21 +229,7 @@ spec:
       allowPrivilegeEscalation: true
     command: ["/usr/local/bin/entrypoint.sh"]
     args:
-      - "slurmdbd"
-    # command: ["/bin/bash", "-c"]
-    # args:
-    #   - |
-    #     echo "Copying and Chowning /currentuser from /templates"
-    #     chmod 755 /currentuser
-    #     mkdir -p /currentuser/user
-    #     chmod 700 /currentuser/user
-    #     cp -rp /templates/.ssh /currentuser/user/
-    #     cp -rp /etc/ssh/ssh_host_* /currentuser/user/.ssh/
-    #     chown -R ${KUBE_JOB_UID}:${KUBE_JOB_FSGID} /currentuser/user
-    #     groupadd -g ${KUBE_JOB_FSGID} mygroup
-    #     useradd -u ${KUBE_JOB_UID} -g ${KUBE_JOB_FSGID} user -M -d "${USER_HOME}" -s /bin/bash
-    #     cp -p /etc/passwd /currentuser/passwd
-    #     cp -p /etc/group /currentuser/group
+      - "init"
     volumeMounts:
     - name: currentuser
       mountPath: /currentuser

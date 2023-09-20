@@ -22,8 +22,8 @@ then
     chown -R ${KUBE_JOB_UID}:${KUBE_JOB_FSGID} /currentuser/user
 
     echo "Adding current User and Group"
-    groupadd -g ${KUBE_JOB_FSGID} mygroup
-    useradd -u ${KUBE_JOB_UID} -g ${KUBE_JOB_FSGID} user -M -d "${USER_HOME}" -s /bin/bash
+    groupadd -g ${KUBE_JOB_FSGID} ${KUBE_JOB_FS_GROUPNAME}
+    useradd -u ${KUBE_JOB_UID} -g ${KUBE_JOB_FSGID} ${KUBE_JOB_USERNAME} -M -d "${USER_HOME}" -s /bin/bash
     cp -p /etc/passwd /currentuser/passwd
     cp -p /etc/group /currentuser/group
 
@@ -40,47 +40,77 @@ then
     /usr/sbin/sshd -e || exit 1
 
     echo "---> Waiting for all nodes to become active before starting OpenMPI Job..."
-    WORKER_PODS_LIST="$2"
-    IFS=',' read -ra WORKER_PODS <<< "$WORKER_PODS_LIST"
-    for WORKER_POD in "${WORKER_PODS[@]}"; do
-        until 2>/dev/null >/dev/tcp/${WORKER_POD}/22
-        do
-            echo "-- Worker ${WORKER_POD} is not available.  Retrying ..."
-            sleep 2
-        done
-        echo "-- Worker ${WORKER_POD} is ready."
-    done
-    
-    echo "-- All workers are ready starting mpirun ..."
+    OPENMPI_NODE_LIST_CSV=$(hostlist --expand -s , ${SLURM_JOB_NODELIST})
+    OPENMPI_TOTAL_GPUS=$(($SLURM_JOB_NUM_NODES * $SLURM_GPUS_PER_NODE))
+    OPENPUT_HOST_STRING=''
+    echo "Job will run with '${SLURM_JOB_NUM_NODES}' nodes and '${SLURM_GPUS_PER_NODE}' GPUs per node"
+    echo "Total GPU count is '${OPENMPI_TOTAL_GPUS}'"
+    echo "OPENMPI_NODE_LIST_CSV: ${OPENMPI_NODE_LIST_CSV}"
+    echo "OPENMPI_CONNECTION_TIMEOUT: ${OPENMPI_CONNECTION_TIMEOUT}"
 
-    exec mpirun -np 32 \
-        --host 192.168.1.31:8,192.168.1.32:8,192.168.1.33:8,192.168.1.34:8 \
-        -mca btl tcp,self  -x NCCL_DEBUG=INFO -x NCCL_SOCKET_IFNAME=vlan2100 \
+    IFS=',' read -ra WORKER_PODS <<< "$OPENMPI_NODE_LIST_CSV"
+    for WORKER_POD in "${WORKER_PODS[@]}"; do
+        WORKER_HOSTNAME="slurm-job-${SLURM_JOB_ID}-${WORKER_POD}"
+        OPENPUT_HOST_STRING+="${WORKER_HOSTNAME}:${SLURM_GPUS_PER_NODE},"
+
+        COUNT=0
+        while [[ $COUNT -lt $OPENMPI_CONNECTION_TIMEOUT ]]
+        do
+            2>/dev/null >/dev/tcp/${WORKER_HOSTNAME}/2222 && CONNECTED=1 || CONNECTED=0
+            if [[ $CONNECTED -eq 1 ]]; then
+                break
+            else
+                echo "-- Worker ${WORKER_HOSTNAME} is not ready yet.  Retrying (${COUNT}/${OPENMPI_CONNECTION_TIMEOUT})"
+                COUNT=$(($COUNTER + 1))
+                sleep 1
+            fi
+        done
+
+        if [[ $COUNT -ge $OPENMPI_CONNECTION_TIMEOUT ]]; then
+            echo "-- Timed-out waiting for Worker to be ready"
+            exit 2
+        fi
+
+        echo "-- Worker ${WORKER_HOSTNAME} is ready."
+    done
+    OPENPUT_HOST_STRING=${OPENPUT_HOST_STRING::-1}
+
+    echo "-- All workers are ready starting mpirun ..."
+    echo "mpirun command: mpirun -np ${OPENMPI_TOTAL_GPUS} --host ${OPENPUT_HOST_STRING} -mca btl tcp,self  -x NCCL_DEBUG=INFO -x NCCL_SOCKET_IFNAME=eth0 -x NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_4,mlx5_6,mlx5_8,mlx5_10,mlx5_12,mlx5_14,mlx5_16 ${KUBE_SCRIPT} ${KUBE_SCRIPT_VARS}"
+    
+    exec mpirun -np ${OPENMPI_TOTAL_GPUS} \
+        -mca plm_rsh_args "-p 2222" \
+        --host ${OPENPUT_HOST_STRING} \
+        -mca btl tcp,self  -x NCCL_DEBUG=INFO -x NCCL_SOCKET_IFNAME=eth0 \
         -x NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_4,mlx5_6,mlx5_8,mlx5_10,mlx5_12,mlx5_14,mlx5_16 \
-        "${KUBE_SCRIPT}" ${KUBE_SCRIPT_VARS} \
-        -b 8 -e 4G -f 2 -g 1  
-    exit
+        "${KUBE_SCRIPT}" ${KUBE_SCRIPT_VARS}
+    
+    exit 0
 fi
 
 ## slurmd Entrypoint ##
 if [ "$1" = "worker" ]
 then
-    echo "---> Starting the MUNGE Authentication service (munged) ..."
-    gosu munge /usr/sbin/munged
+    echo "---> Starting the OpenMPI WORKER Entrypoint ..."
 
-    echo "---> Waiting for slurmctld to become active before starting slurmd..."
+    echo "---> Starting sshd ..."
+    /usr/sbin/sshd -e || exit 1
 
-    until 2>/dev/null >/dev/tcp/slurmctld/6817
+    echo "---> Waiting for Controller to become ready..."
+    OPENMPI_CONTROLLER_HOSTNAME="slurm-job-${SLURM_JOB_ID}-${OPENMPI_CONTROLLER}"
+    until 2>/dev/null >/dev/tcp/${OPENMPI_CONTROLLER_HOSTNAME}/2222
     do
-        echo "-- slurmctld is not available.  Sleeping ..."
+        echo "-- Controller ${OPENMPI_CONTROLLER_HOSTNAME} is not available.  Retrying ..."
         sleep 2
     done
-    echo "-- slurmctld is now active ..."
+    echo "-- Controller ${OPENMPI_CONTROLLER_HOSTNAME} is ready. Sleeping until controller shuts down..."
 
-    echo "---> Starting the Slurm Node Daemon (slurmd) ..."
-    cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
-    cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
-    exec /usr/sbin/slurmd -Dv
+    while 2>/dev/null >/dev/tcp/${OPENMPI_CONTROLLER_HOSTNAME}/2222
+    do
+        sleep 5
+    done
+    echo "-- Controller ${OPENMPI_CONTROLLER_HOSTNAME} has become unreachable, Shutting down worker ..."
+    exit 0
 fi
 
 # Disable fall-through exec
