@@ -16,10 +16,4 @@ else
     log "Sucessfully generated new munge.key"
 fi
 
-# Build and push Images
-IMAGE_TIMESTAMP=$(date +"%Y%m%d-%S")
-log "Attempting to build kube-slurm Docker images with Tag ${IMAGE_TIMESTAMP}"
-cd docker
-./build.sh ${IMAGE_TIMESTAMP}
-
 log "Setup Complete"

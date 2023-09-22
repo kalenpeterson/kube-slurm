@@ -25,13 +25,13 @@ slurm:
     namespace: slurm-db
     mysql_image: docker.io/mysql:8.0.29
     slurm_image: docker.io/kalenpeterson/slurm-docker-cluster:nuc-v20
-    cleanup_temp_manifest: False
-  cluster_name: linux
+    cleanup_temp_manifest: True
+  cluster_name: slurm
   srun_port_range_start: 60001
   srun_port_range_end: 60010
   database:
     name: slurm_acct_db
     user: slurm
-    password: 9dd1d5c19c293f0c417d6fb8
-    root_password: Intel01!@#$
+    password: <****>
+    root_password: <****>
   enable_gpu: True

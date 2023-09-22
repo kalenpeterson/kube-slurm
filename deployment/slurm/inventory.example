@@ -1,0 +1,40 @@
+[all]
+nvidia-mgmt01 ip=10.227.209.171 ansible_host=10.227.209.171
+nvidia-mgmt02 ip=10.227.209.172 ansible_host=10.227.209.172
+nvidia-mgmt03 ip=10.227.209.173 ansible_host=10.227.209.173
+nvidia-node01 ip=10.227.209.181 ansible_host=10.227.209.181
+nvidia-node02 ip=10.227.209.182 ansible_host=10.227.209.181
+lambda-node01 ip=10.227.209.191 ansible_host=10.227.209.191
+lambda-node02 ip=10.227.209.192 ansible_host=10.227.209.192
+
+[mgmt]
+nvidia-mgmt01
+nvidia-mgmt02
+nvidia-mgmt03
+
+[node]
+nvidia-node01
+nvidia-node02
+lambda-node01
+lambda-node02
+
+[provision]
+nvidia-mgmt01
+
+[dgx]
+nvidia-node01
+nvidia-node02
+
+[lambda]
+lambda-node01
+lambda-node02
+
+[all:vars]
+ansible_user=dgx
+
+[provision:vars]
+ansible_python_interpreter=/usr/bin/python
+ansible_connection=local
+
+[node:vars]
+ansible_python_interpreter=/usr/bin/python3
