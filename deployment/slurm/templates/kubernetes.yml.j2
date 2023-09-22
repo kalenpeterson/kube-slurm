@@ -20,6 +20,8 @@ data:
     {{ lookup('template', 'templates/slurm.conf.j2') | indent }}
   slurmdbd.conf: |
     {{ lookup('template', 'templates/slurmdbd.conf.j2') | indent }}
+  job_submit.lua: |
+    {{ lookup('template', 'templates/luaJobScripts/job_submit.lua') | indent }}
 
 ---
 apiVersion: apps/v1
@@ -175,6 +177,9 @@ spec:
               name: slurm-config
             - mountPath: /var/log/slurm
               name: var-log-slurm
+            - mountPath: /etc/munge/munge.key
+              name: etc
+              subPath: munge/munge.key
       volumes:
         - name: slurm-config
           configMap:
@@ -189,6 +194,9 @@ spec:
         - name: var-spool-slurmd
           persistentVolumeClaim:
             claimName: var-spool-slurmd
+        - name: etc
+          hostPath:
+            path: /etc
       nodeSelector:
         node-role.kubernetes.io/master: ""
       restartPolicy: Always
@@ -339,9 +347,11 @@ spec:
             - name: LOGROTATE_COMPRESS
               value: "nocompress"
             - name: LOGROTATE_ROTATE
-              value: "5"
+              value: "26"
             - name: LOGROTATE_SIZE
-              value: "100M"
+              value: "500M"
+            - name: LOGROTATE_CRON
+              value: "3 22 * * *"
           volumeMounts:
             - mountPath: /logs
               name: var-log-slurm
@@ -411,8 +421,6 @@ spec:
               name: slurm-config
             - mountPath: /var/log/slurm
               name: var-log-slurm
-            - mountPath: /nas
-              name: nas
             - mountPath: /etc/passwd
               name: etc
               subPath: passwd
@@ -430,10 +438,6 @@ spec:
         - name: var-log-slurm
           persistentVolumeClaim:
             claimName: var-log-slurm
-        - name: nas
-          hostPath:
-            path: /nas
-            type: Directory
         - name: etc
           hostPath:
             path: /etc

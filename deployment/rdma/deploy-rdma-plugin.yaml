@@ -1,0 +1,23 @@
+---
+- name: Deploy K8s RDMA Shared Device Plugin
+  hosts: provision
+  gather_facts: no
+
+  tasks:
+    - name: Apply ConfigMap
+      shell: |
+        kubectl apply -f files/configmap.yaml
+      register: kubectl_out
+
+    - name: Print Kubectl Apply Output
+      debug:
+        var: kubectl_out.stdout
+
+    - name: Apply Daemonset
+      shell: |
+        kubectl apply -f files/daemonset.yaml
+      register: kubectl_out
+
+    - name: Print Kubectl Apply Output
+      debug:
+        var: kubectl_out.stdout

@@ -29,7 +29,7 @@ then
     }
     echo "-- Database is now active ..."
 
-    exec gosu slurm /usr/sbin/slurmdbd -Dv
+    exec gosu slurm /usr/sbin/slurmdbd -D
 fi
 
 ## slurmdctld Entrypoint ##
@@ -61,7 +61,7 @@ then
     cp /hostpath/etc/group /etc/group || exit 52
 
     echo "---> Starting the Slurm Controller Daemon (slurmctld) ..."
-    exec gosu slurm /usr/sbin/slurmctld -Dv
+    exec gosu slurm /usr/sbin/slurmctld -D
 fi
 
 ## slurmd Entrypoint ##
@@ -82,7 +82,7 @@ then
     echo "---> Starting the Slurm Node Daemon (slurmd) ..."
     cp -f /etc/slurm/slurm.conf.injected /etc/slurm/slurm.conf && chmod 600 /etc/slurm/slurm.conf
     cp -f /etc/slurm/slurmdbd.conf.injected /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
-    exec /usr/sbin/slurmd -Dv
+    exec /usr/sbin/slurmd -D
 fi
 
 exec "$@"

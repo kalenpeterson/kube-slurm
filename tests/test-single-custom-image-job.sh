@@ -11,7 +11,7 @@ export SLURMD_NODENAME=nvidia-mgmt01
 export KUBE_INIT_TIMEOUT=300
 
 # Define the Image to run
-export KUBE_IMAGE=docker.io/nginx:latest
+export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230706-v4
 
 # Define the Script to run
 export KUBE_SCRIPT="/home/dgx/kube-slurm/containers/slurm-single-tf-job/test.sh"
