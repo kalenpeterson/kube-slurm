@@ -6,7 +6,7 @@
 #SBATCH --error=logErrors-%j.err
 
 # Define the Image to run
-export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230720-v10
+export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230720-v19
 
 # Define the Script to run
 export KUBE_SCRIPT=/nas/slurm/data/run-sleep.sh
@@ -18,4 +18,4 @@ export KUBE_DATA_VOLUME=/nas/slurm/data
 export KUBECONFIG=~/.kube/config
 
 # Call the Wrapper
-srun /home/dgx/tests/kube-slurm-custom-image-job.sh
+srun /home/dgx/kube-slurm/wrappers/kube-slurm-multinode-job-v2.sh

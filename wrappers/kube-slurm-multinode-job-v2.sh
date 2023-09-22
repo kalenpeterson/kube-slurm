@@ -2,26 +2,32 @@
 ## Manage Single-Run Job Pods from Slurm
 #source ../config/settings.sh
 
+## Manage Logging
+function log () {
+  TIMESTAMP=$(date "+%T")
+  echo "# KUBE-SLURM: [${SLURMD_NODENAME}] (${TIMESTAMP}): ${1}"
+}
+
 # Print Slurm ENV Vars
 echo
-echo "Slurm ENV Vars:"
-echo "SLURM_GPUS: ${SLURM_GPUS}"
-echo "SLURM_JOB_ACCOUNT: ${SLURM_JOB_ACCOUNT}"
-echo "SLURM_JOB_ID: ${SLURM_JOB_ID}"
-echo "SLURM_JOB_NAME: ${SLURM_JOB_NAME}"
-echo "SLURM_NODEID: ${SLURM_NODEID}"
-echo "SLURMD_NODENAME: ${SLURMD_NODENAME}"
-echo "SLURM_ARRAY_TASK_ID: ${SLURM_ARRAY_TASK_ID}"
-
-echo "SLURM_JOB_NODELIST: ${SLURM_JOB_NODELIST}"
-echo "SLURM_JOB_NUM_NODES: ${SLURM_JOB_NUM_NODES}"
-echo "SLURM_GPUS_PER_NODE: ${SLURM_GPUS_PER_NODE}"
+log "Slurm ENV Vars:"
+log "SLURM_GPUS: ${SLURM_GPUS:=0}"
+log "SLURM_JOB_ACCOUNT: ${SLURM_JOB_ACCOUNT}"
+log "SLURM_JOB_ID: ${SLURM_JOB_ID}"
+log "SLURM_JOB_NAME: ${SLURM_JOB_NAME}"
+log "SLURM_NODEID: ${SLURM_NODEID}"
+log "SLURMD_NODENAME: ${SLURMD_NODENAME}"
+log "SLURM_ARRAY_TASK_ID: ${SLURM_ARRAY_TASK_ID}"
+log "SLURM_JOB_NODELIST: ${SLURM_JOB_NODELIST}"
+log "SLURM_JOB_NUM_NODES: ${SLURM_JOB_NUM_NODES:=0}"
+log "SLURM_GPUS_PER_NODE: ${SLURM_GPUS_PER_NODE:=0}"
+log "PATH: ${PATH}"
 
 # Set Job Details
-KUBE_JOB_NAME=slurm-job-${SLURM_JOB_ID}
+KUBE_JOB_NAME=slurm-job-${SLURM_JOB_ID}-${SLURMD_NODENAME}
 KUBE_JOB_UID=$(id -u)
 KUBE_JOB_GID=$(id -g)
-JUBE_JOB_USERNAME=$(id -nu)
+KUBE_JOB_USERNAME=$(id -nu)
 KUBE_NODE=${SLURMD_NODENAME}
 KUBE_GPU_COUNT=${SLURM_GPUS}
 KUBE_INIT_TIMEOUT=${KUBE_INIT_TIMEOUT:=600}
@@ -35,34 +41,28 @@ KUBE_CLUSTER_DNS=${KUBE_CLUSTER_DNS:=nvidia-pod}
 KUBE_DATA_VOLUME=${KUBE_DATA_VOLUME}
 KUBE_JOB_FSGID=${KUBE_JOB_FSGID}
 
-KUBE_JOB_NODE_LIST=($(scontrol show hostnames "${SLURM_JOB_NODELIST}"))
-
 # Setup Kubeconfig
 export KUBECONFIG=${KUBECONFIG:=/data/erisxdl/kube-slurm/config/kube.config}
 
 # Print Kube ENV Vars
 echo 
-echo "Kube ENV Vars:"
-echo "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
-echo "KUBE_JOB_UID: ${KUBE_JOB_UID}"
-echo "KUBE_JOB_GID: ${KUBE_JOB_GID}"
-echo "KUBE_IMAGE: ${KUBE_IMAGE}"
-echo "KUBE_DATA_VOLUME: ${KUBE_DATA_VOLUME}"
-echo "KUBE_NODE: ${KUBE_NODE}"
-echo "KUBE_GPU_COUNT: ${KUBE_GPU_COUNT}"
-echo "KUBE_INIT_TIMEOUT: ${KUBE_INIT_TIMEOUT}"
-echo "KUBE_POD_MONITOR_INTERVAL: ${KUBE_POD_MONITOR_INTERVAL}"
-echo "KUBE_NAMESPACE: ${KUBE_NAMESPACE}"
-echo "USER_HOME: ${USER_HOME}"
-echo "KUBE_SCRIPT: ${KUBE_SCRIPT}"
-echo "KUBE_SCRIPT_VARS: ${KUBE_SCRIPT_VARS}"
-echo "KUBE_CLUSTER_DNS: ${KUBE_CLUSTER_DNS}"
-echo "KUBE_JOB_NODE_LIST: ${KUBE_JOB_NODE_LIST}"
-
-## Manage Logging
-function log () {
-  echo "# KUBE-SLURM: ${1}"
-}
+log "Kube ENV Vars:"
+log "KUBE_JOB_NAME: ${KUBE_JOB_NAME}"
+log "KUBE_JOB_UID: ${KUBE_JOB_UID}"
+log "KUBE_JOB_GID: ${KUBE_JOB_GID}"
+log "KUBE_JOB_USERNAME: ${KUBE_JOB_USERNAME}"
+log "KUBE_IMAGE: ${KUBE_IMAGE}"
+log "KUBE_DATA_VOLUME: ${KUBE_DATA_VOLUME}"
+log "KUBE_NODE: ${KUBE_NODE}"
+log "KUBE_GPU_COUNT: ${KUBE_GPU_COUNT}"
+log "KUBE_INIT_TIMEOUT: ${KUBE_INIT_TIMEOUT}"
+log "KUBE_POD_MONITOR_INTERVAL: ${KUBE_POD_MONITOR_INTERVAL}"
+log "KUBE_NAMESPACE: ${KUBE_NAMESPACE}"
+log "USER_HOME: ${USER_HOME}"
+log "KUBE_SCRIPT: ${KUBE_SCRIPT}"
+log "KUBE_SCRIPT_VARS: ${KUBE_SCRIPT_VARS}"
+log "KUBE_CLUSTER_DNS: ${KUBE_CLUSTER_DNS}"
+log "KUBE_JOB_NODE_LIST: ${KUBE_JOB_NODE_LIST}"
 
 ## Manage Cleanup for Job Signals
 WATCH_POD=true
@@ -78,6 +78,7 @@ function cleanup () {
 trap cleanup EXIT # Normal Exit
 trap cleanup SIGTERM # Termination from Slurm
 
+## Get pod error messages when they fail
 function get_pod_error () {
   NAMESPACE=$1
   POD=$2
@@ -87,29 +88,30 @@ function get_pod_error () {
   kubectl logs -n ${NAMESPACE} ${POD}
 }
 
-## Elect OpemMPI Leader
-### Execition will continue from the elected controller
-### Other nodes will sleep and wait for jobs
-OPENMPI_CONTROLLER=${KUBE_JOB_NODE_LIST[0]}
+## Select OpenMPI Controller and Workers
+OPENMPI_CONTROLLER=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" |head -n1)
 log "Node ${OPENMPI_CONTROLLER} has been selected as the OpenMPI Controller"
 if [[ $SLURMD_NODENAME == $OPENMPI_CONTROLLER ]]; then
-  log "I am ${SLURMD_NODENAME}, this node will be the OpemMPI Controller for this Multinode Job Run"
-  log "Continuing execution from this node"
+  OPENMPI_POD_TYPE="controller"
 else
-  log "I am ${SLURMD_NODENAME}, this node will not be the OpenMPI Controller"
-  log "Going to sleep, waiting for workload instructions from OpenMPI..."
-  sleep infinity
+  OPENMPI_POD_TYPE="worker"
 fi
+log "OPENMPI_POD_TYPE: ${OPENMPI_POD_TYPE}"
+
+# Set the connection timeout between OpenMPI Pods
+OPENMPI_CONNECTION_TIMEOUT=${OPENMPI_CONNECTION_TIMEOUT:=300}
+log "OPENMPI_CONNECTION_TIMEOUT: ${OPENMPI_CONNECTION_TIMEOUT}"
 
 ## Check Data Volume and get it's GID
 log "Checking GID of KUBE_DATA_VOLUME"
-echo "KUBE_JOB_FSGID: ${KUBE_JOB_FSGID}"
+KUBE_JOB_FSGID=$(getfacl -nat "${KUBE_DATA_VOLUME}" 2>/dev/null |grep ^GROUP |awk '{print $2}')
+log "KUBE_JOB_FSGID: ${KUBE_JOB_FSGID}"
 if [[ "${KUBE_JOB_FSGID}" == "" || "${DATA_VOLUME_GID}" == "0" ]]; then
   log "ERROR: Failed to get GID of KUBE_DATA_VOLUME OR GID was 0"
   exit 1
 fi
 KUBE_JOB_FS_GROUPNAME=$(getent group ${KUBE_JOB_FSGID} | cut -d: -f1)
-echo "KUBE_JOB_FS_GROUPNAME: ${KUBE_JOB_FS_GROUPNAME}"
+log "KUBE_JOB_FS_GROUPNAME: ${KUBE_JOB_FS_GROUPNAME}"
 
 ## Ensure Namespace Exists
 log "Setting up Namespace"
@@ -130,14 +132,14 @@ cat <<EOF | kubectl create -n ${KUBE_NAMESPACE} -f -
 apiVersion: v1
 kind: Service
 metadata:
-  name: ssh-${KUBE_JOB_NAME}
+  name: ${KUBE_JOB_NAME}
   labels:
     app: ${KUBE_JOB_NAME}
 spec:
   type: ClusterIP
   ports:
   - name: sshd
-    port: 22
+    port: 2222
     targetPort: 2222
     protocol: TCP
   selector:
@@ -168,10 +170,10 @@ spec:
     hostPath:
       type: Directory
       path: "${USER_HOME}"
-  - name: dshm
-    emptyDir:
-      medium: Memory
-      sizeLimit: 32Gi
+#  - name: dshm
+#    emptyDir:
+#      medium: Memory
+#      sizeLimit: 32Gi
   - name: currentuser
     emptyDir:
       sizeLimit: 500Mi
@@ -186,9 +188,10 @@ spec:
       capabilities:
         add: ["IPC_LOCK"]
     workingDir: "${USER_HOME}"
-    # command: ["/bin/bash"]
-    # args: ["-c","${KUBE_SCRIPT}"]
-    command: ["/usr/sbin/sshd","-e","-D"]
+    command: ["/usr/local/bin/entrypoint.sh"]
+    args:
+      - ${OPENMPI_POD_TYPE}
+#    command: ["sleep","infinity"]
     ports:
     - name: sshd
       containerPort: 2222
@@ -202,6 +205,18 @@ spec:
       value: "${SLURM_ARRAY_TASK_ID}"
     - name: KUBE_SCRIPT_VARS
       value: "${KUBE_SCRIPT_VARS}"
+    - name: OPENMPI_CONTROLLER
+      value: "${OPENMPI_CONTROLLER}"
+    - name: OPENMPI_CONNECTION_TIMEOUT
+      value: "${OPENMPI_CONNECTION_TIMEOUT}"
+    - name: SLURM_JOB_NODELIST
+      value: "${SLURM_JOB_NODELIST}"
+    - name: SLURM_JOB_NUM_NODES
+      value: "${SLURM_JOB_NUM_NODES}"
+    - name: SLURM_GPUS_PER_NODE
+      value: "${SLURM_GPUS_PER_NODE}"
+    - name: SLURM_JOB_ID
+      value: "${SLURM_JOB_ID}"
     volumeMounts:
     - name: apps
       mountPath: /apps
@@ -209,8 +224,8 @@ spec:
       mountPath: "${KUBE_DATA_VOLUME}"
     - name: home
       mountPath: "${USER_HOME}"
-    - name: dshm
-      mountPath: /dev/shm
+#    - name: dshm
+#      mountPath: /dev/shm
     - name: currentuser
       mountPath: /currentuser
     - name: currentuser
@@ -230,6 +245,17 @@ spec:
     command: ["/usr/local/bin/entrypoint.sh"]
     args:
       - "init"
+    env:
+    - name: KUBE_JOB_UID
+      value: "${KUBE_JOB_UID}"
+    - name: KUBE_JOB_FSGID
+      value: "${KUBE_JOB_FSGID}"
+    - name: KUBE_JOB_USERNAME
+      value: "${KUBE_JOB_USERNAME}"
+    - name: KUBE_JOB_FS_GROUPNAME
+      value: "${KUBE_JOB_FS_GROUPNAME}"
+    - name: USER_HOME
+      value: "${USER_HOME}"
     volumeMounts:
     - name: currentuser
       mountPath: /currentuser
@@ -259,9 +285,11 @@ do
   kubectl logs --since=${KUBE_POD_MONITOR_INTERVAL}s -n ${KUBE_NAMESPACE} ${KUBE_JOB_NAME} 2>/dev/null
 
   # Check if the Container has stopped. If it has, return the container's exit code
-  POD_STATUS=$(kubectl describe pods -n ${KUBE_NAMESPACE} ${KUBE_JOB_NAME} |grep State: |awk '{print $2}')
+  # NOTE: This has been modified to return to "last" container's status. We added init containers, and this will ignore them
+  #       if more containers are added, you'll need to find a way to deal with that
+  POD_STATUS=$(kubectl describe pods -n ${KUBE_NAMESPACE} ${KUBE_JOB_NAME} |grep State: |awk '{print $2}' |tail -1)
   if [[ ${POD_STATUS} == 'Terminated' ]]; then
-    POD_EXIT_CODE=$(kubectl describe pods -n ${KUBE_NAMESPACE} ${KUBE_JOB_NAME} |grep 'Exit Code:' |awk '{print $3}')
+    POD_EXIT_CODE=$(kubectl describe pods -n ${KUBE_NAMESPACE} ${KUBE_JOB_NAME} |grep 'Exit Code:' |awk '{print $3}' |tail -1)
     log "Container terminated with exit code '${POD_EXIT_CODE}'"
     exit ${POD_EXIT_CODE}
   fi

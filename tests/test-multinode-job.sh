@@ -14,7 +14,7 @@ export SLURM_JOB_NODELIST=nvidia-mgmt0[1-2]
 export KUBE_INIT_TIMEOUT=300
 
 # Define the Image to run
-export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230720-v10
+export KUBE_IMAGE=docker.io/kalenpeterson/lambda-openmpi:20230720-v19
 
 # Define the Script to run
 export KUBE_SCRIPT=/nas/slurm/data/run-sleep.sh
